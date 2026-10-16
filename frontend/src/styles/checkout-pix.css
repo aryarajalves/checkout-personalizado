@@ -1,0 +1,304 @@
+/* Estilos dedicados ao Fluxo de Pagamento Pix (Modularizado para respeitar limite de linhas) */
+
+.pix-payment-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pix-payment-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.pix-back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+.pix-back-button:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+.pix-header-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pix-order-number {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  background-color: #f8fafc;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+.pix-total-highlight {
+  font-size: 18px;
+  font-weight: 800;
+  color: #059669;
+}
+
+/* Área do QR Code */
+.pix-qr-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background-color: #f8fafc;
+  padding: 24px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.pix-timer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #fef3c7;
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 20px;
+  margin-bottom: 16px;
+}
+
+.pix-qr-wrapper {
+  background-color: #ffffff;
+  padding: 14px;
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+  margin-bottom: 14px;
+}
+
+.pix-qr-image {
+  width: 190px;
+  height: 190px;
+  display: block;
+}
+
+.pix-qr-instruction {
+  font-size: 13.5px;
+  color: #475569;
+  max-width: 380px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Seção Copia e Cola */
+.pix-copiacola-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pix-copiacola-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.pix-copiacola-input-group {
+  display: flex;
+  gap: 8px;
+}
+.pix-copiacola-input {
+  flex: 1;
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  font-family: monospace;
+  color: #334155;
+  outline: none;
+  cursor: pointer;
+}
+.pix-copiacola-input:focus {
+  border-color: #0284c7;
+  background-color: #ffffff;
+}
+
+.pix-copy-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #0284c7;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.pix-copy-button:hover {
+  background-color: #0369a1;
+}
+.pix-copy-button.copied {
+  background-color: #059669;
+}
+
+.pix-copied-feedback {
+  font-size: 12px;
+  color: #059669;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Indicador de Espera */
+.pix-waiting-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px;
+  background-color: #eff6ff;
+  border-radius: 8px;
+  border: 1px solid #bfdbfe;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1e40af;
+}
+
+.pix-pulse-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #3b82f6;
+  animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(0.85); }
+}
+
+/* Caixa de Simulação em Testes */
+.pix-simulation-box {
+  background-color: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.pix-simulation-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+}
+.pix-simulate-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #10b981;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.pix-simulate-button:hover:not(:disabled) {
+  background-color: #059669;
+}
+.pix-simulate-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Tela de Confirmação e Sucesso */
+.pix-success-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 32px 20px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #86efac;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.08);
+}
+.pix-success-icon-wrapper {
+  margin-bottom: 16px;
+}
+.pix-success-icon {
+  color: #10b981;
+}
+.pix-success-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #065f46;
+  margin: 0 0 8px 0;
+}
+.pix-success-subtitle {
+  font-size: 14px;
+  color: #374151;
+  margin: 0 0 20px 0;
+}
+.pix-order-badge {
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  color: #166534;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 20px;
+}
+.pix-receipt-box {
+  width: 100%;
+  max-width: 320px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pix-receipt-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: #475569;
+}
+.pix-status-paid {
+  font-weight: 700;
+  color: #059669;
+}
+.pix-instant-badge {
+  font-weight: 700;
+  color: #0284c7;
+}
+.pix-instructions-note {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
+}

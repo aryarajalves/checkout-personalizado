@@ -143,6 +143,7 @@ def rename_backup_file(old_s3_key: str, old_filename: str, new_filename: str, fo
         target_folder += "/"
     new_s3_key = f"{target_folder}{new_filename}"
 
+    s3_failed = False
     s3 = get_s3_client()
     if s3 and settings.B2_BUCKET_NAME:
         try:
@@ -153,7 +154,7 @@ def rename_backup_file(old_s3_key: str, old_filename: str, new_filename: str, fo
             logger.info(f"Arquivo renomeado no S3 de {old_s3_key} para {new_s3_key}")
         except Exception as e:
             logger.error(f"Erro ao renomear arquivo no S3: {e}")
-            raise RuntimeError(f"Falha ao renomear arquivo no S3: {e}")
+            s3_failed = True
 
     # Fallback local
     old_local = os.path.join("/app/backups_local", old_filename)
@@ -163,5 +164,9 @@ def rename_backup_file(old_s3_key: str, old_filename: str, new_filename: str, fo
             os.rename(old_local, new_local)
         except Exception as e:
             logger.error(f"Erro ao renomear arquivo local: {e}")
+            if s3_failed:
+                raise RuntimeError(f"Falha ao renomear arquivo no S3 e localmente: {e}")
+    elif s3_failed:
+        raise RuntimeError(f"Falha ao renomear arquivo no S3 e arquivo local não encontrado.")
 
     return new_s3_key

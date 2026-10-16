@@ -1,0 +1,354 @@
+/* ==========================================================================
+   Estilos do Módulo de Recuperação de Vendas (Design Premium Light)
+   ========================================================================== */
+
+.recovery-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 32px;
+  max-width: 1300px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.recovery-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.recovery-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.3px;
+}
+
+.recovery-subtitle {
+  font-size: 13.5px;
+  color: #64748b;
+  margin: 4px 0 0;
+}
+
+.recovery-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.recovery-product-select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.recovery-product-select-wrapper .filter-icon {
+  position: absolute;
+  left: 12px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.recovery-product-select {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #1e293b;
+  padding: 9px 14px 9px 36px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.recovery-product-select:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+}
+
+.recovery-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  padding: 9px 16px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.recovery-refresh-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.recovery-refresh-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Métricas / Stats Grid */
+.recovery-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 16px;
+}
+
+.recovery-stat-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.recovery-stat-card:hover {
+  transform: translateY(-2px);
+  border-color: #cbd5e1;
+}
+
+.recovery-stat-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.recovery-stat-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.recovery-stat-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+}
+
+.recovery-stat-icon-wrapper.orange { background: #fff7ed; color: #ea580c; }
+.recovery-stat-icon-wrapper.green { background: #f0fdf4; color: #16a34a; }
+.recovery-stat-icon-wrapper.cyan { background: #f0f9ff; color: #0284c7; }
+.recovery-stat-icon-wrapper.yellow { background: #fffbeb; color: #d97706; }
+
+.recovery-stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.2;
+}
+
+.recovery-stat-subtext {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 6px;
+}
+
+.stat-badge {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.stat-badge.success { background: #dcfce7; color: #15803d; }
+.stat-badge.info { background: #e0f2fe; color: #0369a1; }
+.text-warning { color: #d97706; }
+
+/* Tabs Navigation */
+.recovery-tabs-nav {
+  display: flex;
+  gap: 12px;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 2px;
+}
+
+.recovery-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: -2px;
+}
+
+.recovery-tab-btn:hover { color: #0f172a; }
+.recovery-tab-btn.active {
+  color: #0284c7;
+  border-bottom-color: #0284c7;
+}
+
+.tab-counter-badge {
+  font-size: 11px;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-weight: 700;
+}
+
+.tab-counter-badge.warning {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+/* Filters Bar */
+.recovery-filters-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 8px 0;
+}
+
+.recovery-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  max-width: 400px;
+}
+
+.recovery-search-box .search-icon {
+  position: absolute;
+  left: 12px;
+  color: #94a3b8;
+}
+
+.recovery-search-input {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #1e293b;
+  padding: 9px 14px 9px 38px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  outline: none;
+  transition: all 0.2s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.recovery-search-input:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+}
+
+.recovery-status-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.recovery-filter-btn {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  padding: 6px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.recovery-filter-btn:hover {
+  color: #0f172a;
+  background: #f1f5f9;
+}
+
+.recovery-filter-btn.active {
+  background: #0284c7;
+  border-color: #0284c7;
+  color: #ffffff;
+}
+
+/* Table Card */
+.recovery-table-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+}
+
+.recovery-table-responsive {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.recovery-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  text-align: left;
+}
+
+.recovery-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 700;
+  padding: 14px 18px;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.recovery-table td {
+  padding: 16px 18px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+  vertical-align: middle;
+}
+
+.recovery-table tbody tr:hover td {
+  background-color: #f8fafc;
+}
+
+.lead-info-col { display: flex; flex-direction: column; gap: 3px; }
+.lead-name { font-weight: 600; color: #0f172a; }
+.lead-email { font-size: 12.5px; color: #64748b; }
+.lead-phone { font-size: 12.5px; color: #0284c7; font-weight: 600; }
+
+.product-info-col { display: flex; flex-direction: column; gap: 4px; }
+.product-name { font-weight: 500; color: #0f172a; }
+.offer-badge { display: inline-block; font-size: 11.5px; color: #64748b; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; }
+.coupon-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: #7c3aed; background: #faf5ff; padding: 2px 6px; border-radius: 4px; font-weight: 600; }
+.amount-cell { font-weight: 600; color: #0f172a; }
+.amount-cell.highlighted { color: #0284c7; }
+.date-info-col { display: flex; align-items: center; gap: 6px; color: #64748b; font-size: 12.5px; }
+.order-code-badge { font-family: monospace; font-size: 12px; font-weight: 600; color: #334155; background: #f1f5f9; padding: 3px 6px; border-radius: 4px; }
+.order-date-text { display: flex; align-items: center; gap: 4px; color: #64748b; font-size: 12px; margin-top: 3px; }
+
+.status-pill { display: inline-block; padding: 3px 8px; border-radius: 9999px; font-size: 12px; font-weight: 600; }
+.status-pill.abandoned { background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; }
+.status-pill.recovered { background: #f0f9ff; color: #0369a1; border: 1px solid #e0f2fe; }
+.status-pill.converted { background: #f0fdf4; color: #15803d; border: 1px solid #dcfce7; }
+.status-pill.pending, .status-pill.waiting_payment { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+.status-pill.paid { background: #f0fdf4; color: #15803d; border: 1px solid #dcfce7; }
+.status-pill.expired { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+.contacted-pill { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; font-size: 11.5px; color: #15803d; background: #dcfce7; padding: 2px 6px; border-radius: 4px; }

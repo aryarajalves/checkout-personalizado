@@ -1,0 +1,419 @@
+/* ==========================================================================
+   Estilos da Página Pública de Checkout (Clean White Premium)
+   ========================================================================== */
+
+.checkout-page-wrapper {
+  --checkout-primary: #0284c7;
+  --checkout-primary-hover: #0369a1;
+  min-height: 100vh;
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header Seguro */
+.checkout-navbar {
+  background-color: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  padding: 16px 24px;
+}
+.checkout-navbar-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.checkout-brand-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.3px;
+}
+.checkout-security-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #10b981;
+  background-color: #ecfdf5;
+  border: 1px solid #d1fae5;
+  padding: 5px 10px;
+  border-radius: 20px;
+}
+
+/* Container Principal e Layout Grid */
+.checkout-main-container {
+  max-width: 1100px;
+  margin: 32px auto;
+  padding: 0 20px;
+  width: 100%;
+  flex: 1;
+}
+.checkout-grid-layout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 32px;
+  align-items: start;
+}
+@media (max-width: 880px) {
+  .checkout-grid-layout { grid-template-columns: 1fr; }
+  .checkout-column-summary { order: -1; }
+}
+
+/* Cartões de Etapa */
+.checkout-step-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 24px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+.checkout-step-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.checkout-step-number {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: var(--checkout-primary, #0284c7);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.checkout-step-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+.checkout-step-desc {
+  font-size: 12.5px;
+  color: #64748b;
+  margin: 2px 0 0 0;
+}
+
+/* Campos e Formulários */
+.checkout-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 580px) {
+  .checkout-form-grid { grid-template-columns: 1fr; }
+}
+.checkout-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.checkout-field-group.full-width {
+  grid-column: 1 / -1;
+}
+.checkout-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #334155;
+}
+.checkout-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.checkout-field-icon {
+  position: absolute;
+  left: 12px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+.checkout-input-wrapper .checkout-input {
+  padding-left: 38px;
+}
+.checkout-input,
+.checkout-select {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: #0f172a;
+  background-color: #ffffff;
+  outline: none;
+  transition: all 0.15s ease;
+}
+.checkout-input:focus,
+.checkout-select:focus {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+}
+.checkout-input-wrapper.error .checkout-input,
+.checkout-input.error {
+  border-color: #ef4444;
+}
+.checkout-error-text {
+  font-size: 11.5px;
+  color: #ef4444;
+  font-weight: 500;
+}
+
+/* Abas de Pagamento */
+.checkout-payment-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.checkout-payment-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 8px;
+  background-color: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.checkout-payment-tab:hover {
+  border-color: #cbd5e1;
+  background-color: #f1f5f9;
+}
+.checkout-payment-tab.active {
+  background-color: #f0f9ff;
+  border-color: #0284c7;
+  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
+}
+.checkout-tab-icon-box {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.checkout-tab-icon-box.pix { background-color: #ecfdf5; color: #10b981; }
+.checkout-tab-icon-box.card { background-color: #eff6ff; color: #3b82f6; }
+.checkout-tab-icon-box.crypto { background-color: #f5f3ff; color: #8b5cf6; }
+.checkout-tab-title { font-size: 13px; font-weight: 700; color: #0f172a; }
+.checkout-tab-sub { font-size: 10.5px; color: #64748b; }
+
+/* Box Informativo PIX */
+.checkout-pix-info-box {
+  display: flex;
+  gap: 14px;
+  padding: 16px;
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+}
+.checkout-pix-icon { color: #16a34a; flex-shrink: 0; margin-top: 2px; }
+.checkout-pix-title { font-size: 14px; font-weight: 700; color: #166534; margin: 0 0 4px 0; }
+.checkout-pix-desc { font-size: 12.5px; color: #15803d; margin: 0; line-height: 1.45; }
+
+/* Grid do Cartão e Cripto */
+.checkout-card-form-grid,
+.checkout-crypto-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.checkout-crypto-notice {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background-color: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #6d28d9;
+  line-height: 1.4;
+}
+
+/* Botão de Finalização */
+.checkout-action-box {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.checkout-submit-btn {
+  width: 100%;
+  padding: 16px 20px;
+  background: var(--checkout-primary, #10b981);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+  transition: all 0.2s ease;
+}
+.checkout-submit-btn:hover:not(:disabled) {
+  filter: brightness(0.92);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+}
+.checkout-submit-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+.checkout-guarantee-note { font-size: 12px; color: #64748b; text-align: center; margin: 0; }
+
+/* Resumo do Pedido (Coluna Lateral) */
+.checkout-summary-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  position: sticky;
+  top: 24px;
+}
+.checkout-summary-header {
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 14px;
+  margin-bottom: 18px;
+}
+.checkout-summary-title { font-size: 16px; font-weight: 700; color: #0f172a; margin: 0; }
+.checkout-product-preview { display: flex; gap: 14px; margin-bottom: 20px; }
+.checkout-product-image {
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid #e2e8f0;
+}
+.checkout-product-image-fallback {
+  width: 64px;
+  height: 64px;
+  border-radius: 10px;
+  background-color: #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+.checkout-product-name { font-size: 15px; font-weight: 700; color: #0f172a; margin: 0 0 4px 0; }
+.checkout-offer-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #0284c7;
+  background-color: #e0f2fe;
+  padding: 2px 8px;
+  border-radius: 12px;
+  margin-bottom: 6px;
+}
+.checkout-product-description {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Tabela de Preços */
+.checkout-pricing-table {
+  border-top: 1px solid #f1f5f9;
+  padding-top: 16px;
+  margin-bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.checkout-pricing-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13.5px;
+}
+.checkout-pricing-label { color: #64748b; }
+.checkout-pricing-val { font-weight: 600; color: #0f172a; }
+.checkout-pricing-row.total {
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 12px;
+  margin-top: 4px;
+}
+.checkout-total-label { font-size: 15px; font-weight: 700; color: #0f172a; }
+.checkout-total-val-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.checkout-total-val { font-size: 20px; font-weight: 800; color: #059669; }
+.checkout-crypto-equiv { font-size: 11px; color: #94a3b8; }
+
+/* Selos de Confiança */
+.checkout-trust-badges {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  background-color: #f8fafc;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+.checkout-badge-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #475569;
+}
+.checkout-badge-icon { color: #10b981; flex-shrink: 0; }
+
+/* Telas de Loading e Erro */
+.checkout-loading-screen,
+.checkout-error-screen {
+  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px;
+}
+.checkout-spinner { animation: spin 1s linear infinite; color: #0284c7; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.checkout-error-icon { color: #ef4444; margin-bottom: 16px; }
+.checkout-back-btn {
+  margin-top: 18px;
+  display: inline-block;
+  padding: 10px 20px;
+  background-color: #0284c7;
+  color: #ffffff;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 13.5px;
+}
+
+/* Banner de Sucesso */
+.checkout-success-banner {
+  background-color: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 12px;
+  padding: 24px;
+  color: #166534;
+}
+.checkout-success-banner h3 { margin-top: 0; font-size: 18px; font-weight: 700; }
+.checkout-success-details { margin-top: 12px; font-size: 15px; font-weight: 700; }

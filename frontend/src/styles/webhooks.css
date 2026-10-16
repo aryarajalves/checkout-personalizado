@@ -1,0 +1,293 @@
+/* ==========================================================================
+   Estilos do Módulo de Webhooks de Saída (Design System Premium Light)
+   ========================================================================== */
+
+.webhooks-modal-overlay {
+  position: fixed; inset: 0;
+  background-color: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999; padding: 16px;
+  animation: webhooksModalFadeIn 0.2s ease-out;
+}
+
+@keyframes webhooksModalFadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.webhooks-modal-dialog {
+  width: 100%; max-width: 940px; max-height: 90vh;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0; border-radius: 16px;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+
+/* Header */
+.webhooks-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 24px; border-bottom: 1px solid #e2e8f0;
+  background-color: #ffffff;
+}
+.webhooks-title-group { display: flex; align-items: center; gap: 12px; }
+.webhooks-badge-icon {
+  width: 42px; height: 42px; border-radius: 10px;
+  background-color: #e0e7ff; color: #4f46e5;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.webhooks-modal-title {
+  font-size: 17px; font-weight: 700; color: #0f172a; margin: 0;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.webhooks-product-tag {
+  font-size: 12px; font-weight: 600; color: #475569;
+  background-color: #f1f5f9; border: 1px solid #e2e8f0;
+  padding: 2px 8px; border-radius: 6px;
+}
+.webhooks-modal-subtitle { font-size: 12.5px; color: #64748b; margin: 2px 0 0 0; }
+.webhooks-close-btn {
+  background: transparent; border: none; color: #94a3b8; cursor: pointer;
+  padding: 6px; border-radius: 8px; display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s ease;
+}
+.webhooks-close-btn:hover { background-color: #f1f5f9; color: #334155; }
+
+/* Feedback Banners */
+.webhooks-feedback-banner {
+  padding: 10px 24px; font-size: 13px; font-weight: 500;
+  display: flex; align-items: center; gap: 8px; border-bottom: 1px solid transparent;
+}
+.webhooks-feedback-banner.success { background-color: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+.webhooks-feedback-banner.error { background-color: #fef2f2; color: #991b1b; border-color: #fecaca; }
+
+/* Tabs */
+.webhooks-tabs-bar {
+  display: flex; align-items: center; gap: 16px;
+  padding: 0 24px; border-bottom: 1px solid #e2e8f0; background-color: #f8fafc;
+}
+.webhooks-tab-btn {
+  background: transparent; border: none; padding: 14px 4px;
+  font-size: 13.5px; font-weight: 600; color: #64748b; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px;
+  border-bottom: 2px solid transparent; transition: all 0.15s ease;
+}
+.webhooks-tab-btn:hover { color: #0f172a; }
+.webhooks-tab-btn.active { color: #4f46e5; border-bottom-color: #4f46e5; }
+.webhooks-tab-count {
+  font-size: 11px; font-weight: 700; background-color: #e2e8f0; color: #475569;
+  padding: 2px 7px; border-radius: 12px;
+}
+.webhooks-tab-btn.active .webhooks-tab-count { background-color: #e0e7ff; color: #4f46e5; }
+
+/* Modal Body */
+.webhooks-modal-body {
+  flex: 1; overflow-y: auto; padding: 20px 24px; background-color: #ffffff;
+  scrollbar-gutter: stable;
+}
+
+/* Form Container */
+.webhooks-form-card {
+  background-color: #f8fafc; border: 1px solid #cbd5e1; border-radius: 12px;
+  padding: 20px; margin-top: 6px; margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+.webhooks-form-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-bottom: 12px; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0;
+}
+.webhooks-form-title {
+  font-size: 13.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.5px; color: #4f46e5;
+}
+.webhooks-form-group { margin-bottom: 16px; }
+.webhooks-form-label {
+  display: block; font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 6px;
+}
+.webhooks-form-input {
+  width: 100%; padding: 9px 12px; background-color: #ffffff;
+  border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13.5px;
+  color: #0f172a; outline: none; transition: all 0.2s ease;
+}
+.webhooks-form-input:focus { border-color: #4f46e5; box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12); }
+.webhooks-form-hint { font-size: 11.5px; color: #64748b; margin-top: 4px; }
+
+/* Events Grid */
+.webhooks-events-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px;
+}
+.webhooks-event-toggle {
+  background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px;
+  padding: 10px 12px; cursor: pointer; display: flex; align-items: center;
+  justify-content: space-between; transition: all 0.15s ease;
+}
+.webhooks-event-toggle:hover { border-color: #94a3b8; background-color: #fbfcfe; }
+.webhooks-event-toggle.selected { border-color: #4f46e5; background-color: #eef2ff; }
+.webhooks-event-name { font-size: 12.5px; font-weight: 600; color: #1e293b; }
+.webhooks-event-check {
+  width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid #cbd5e1;
+  display: flex; align-items: center; justify-content: center;
+  background-color: #ffffff; color: transparent; transition: all 0.15s ease;
+}
+.webhooks-event-toggle.selected .webhooks-event-check { background-color: #4f46e5; border-color: #4f46e5; color: #ffffff; }
+
+/* Webhook Cards List */
+.webhook-item-card {
+  background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;
+  padding: 16px 18px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.webhook-item-card:hover { border-color: #cbd5e1; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
+.webhook-item-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px;
+}
+.webhook-url-box { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1; }
+.webhook-url-text {
+  font-size: 13px; font-weight: 500; color: #475569; word-break: break-all; font-family: monospace;
+}
+.webhook-chips-container { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.webhook-event-chip {
+  font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px;
+}
+.webhook-event-chip.approved { background-color: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; }
+.webhook-event-chip.waiting { background-color: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+.webhook-event-chip.refunded { background-color: #f3e8ff; color: #7e22ce; border: 1px solid #e9d5ff; }
+.webhook-event-chip.chargeback { background-color: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+.webhook-event-chip.declined { background-color: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
+.webhook-event-chip.expired { background-color: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+
+/* Status Pill */
+.webhook-status-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11.5px; font-weight: 600; padding: 3px 8px; border-radius: 20px;
+}
+.webhook-status-pill.active { background-color: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+.webhook-status-pill.inactive { background-color: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
+
+/* Empty State */
+.webhooks-empty-state {
+  text-align: center; padding: 40px 20px; background-color: #f8fafc;
+  border: 1.5px dashed #cbd5e1; border-radius: 14px;
+}
+.webhooks-empty-icon {
+  width: 52px; height: 52px; border-radius: 50%; background-color: #e0e7ff;
+  color: #4f46e5; display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 14px auto;
+}
+.webhooks-empty-title { font-size: 15px; font-weight: 700; color: #0f172a; margin: 0 0 4px 0; }
+.webhooks-empty-desc { font-size: 13px; color: #64748b; max-width: 420px; margin: 0 auto; line-height: 1.5; }
+
+/* Action Buttons */
+.webhooks-btn-primary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  background-color: #4f46e5; color: #ffffff; border: none; border-radius: 8px;
+  padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all 0.15s ease; box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+}
+.webhooks-btn-primary:hover:not(:disabled) { background-color: #4338ca; }
+.webhooks-btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.webhooks-btn-secondary {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  background-color: #ffffff; color: #334155; border: 1px solid #cbd5e1;
+  border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s ease;
+}
+.webhooks-btn-secondary:hover:not(:disabled) { background-color: #f1f5f9; border-color: #94a3b8; }
+
+.webhooks-btn-icon {
+  background: transparent; border: 1px solid #cbd5e1; border-radius: 6px;
+  color: #64748b; padding: 6px; display: inline-flex; align-items: center;
+  justify-content: center; cursor: pointer; transition: all 0.15s ease;
+}
+.webhooks-btn-icon:hover { background-color: #f1f5f9; color: #0f172a; }
+.webhooks-btn-icon.danger:hover { background-color: #fef2f2; border-color: #fecaca; color: #dc2626; }
+
+/* Logs Table */
+.webhooks-logs-table-card {
+  background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;
+  overflow-x: auto; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+.webhooks-logs-table { width: 100%; min-width: 820px; border-collapse: collapse; text-align: left; }
+.webhooks-logs-table th {
+  background-color: #f8fafc; padding: 10px 14px; font-size: 11.5px;
+  font-weight: 700; color: #475569; text-transform: uppercase;
+  letter-spacing: 0.5px; border-bottom: 1px solid #e2e8f0;
+}
+.webhooks-logs-table td {
+  padding: 10px 14px; border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle; font-size: 12.5px; color: #334155;
+}
+.webhooks-logs-table tr:hover td { background-color: #fbfcfe; }
+.webhooks-logs-table th.actions-col, .webhooks-logs-table td.actions-col {
+  width: 215px; min-width: 215px; text-align: right; padding-right: 24px;
+}
+.webhooks-table-actions {
+  display: inline-flex; align-items: center; justify-content: flex-end; gap: 8px;
+}
+.webhooks-retry-btn {
+  min-width: 86px; justify-content: center;
+}
+
+/* Modal Footer */
+.webhooks-modal-footer {
+  padding: 14px 24px; border-top: 1px solid #e2e8f0; background-color: #f8fafc;
+  display: flex; align-items: center; justify-content: flex-end;
+}
+
+/* Payload Inspector */
+.webhooks-payload-viewer {
+  background-color: #0f172a; color: #e2e8f0; border-radius: 8px; padding: 14px;
+  font-family: monospace; font-size: 11.5px; max-height: 280px; overflow: auto;
+  white-space: pre-wrap; word-break: break-all; margin-top: 8px;
+}
+
+/* Modal de Confirmação de Deleção e Reenvio Centralizado (Padrão do Sistema) */
+.webhooks-confirm-overlay {
+  position: fixed; inset: 0;
+  background-color: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10500; padding: 16px; animation: webhooksModalFadeIn 0.2s ease-out;
+}
+.webhooks-confirm-dialog {
+  background-color: #ffffff; border-radius: 16px; border: 1px solid #e2e8f0;
+  width: 100%; max-width: 440px; padding: 30px 26px 22px 26px; text-align: center;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
+  animation: confirmModalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.webhooks-confirm-icon-box {
+  width: 58px; height: 58px; border-radius: 50%;
+  background-color: #fef2f2; border: 4px solid #fee2e2; color: #dc2626;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 14px auto; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.15);
+}
+.webhooks-confirm-icon-box.retry {
+  background-color: #e0e7ff; border: 4px solid #c7d2fe; color: #4f46e5;
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+}
+.webhooks-confirm-title { font-size: 18.5px; font-weight: 700; color: #0f172a; margin: 0 0 8px 0; }
+.webhooks-confirm-message { font-size: 13.5px; color: #475569; line-height: 1.5; margin: 0 0 6px 0; }
+.webhooks-confirm-url {
+  display: block; font-family: monospace; font-size: 12px; color: #0f172a;
+  background-color: #f1f5f9; padding: 5px 8px; border-radius: 6px;
+  margin-top: 6px; word-break: break-all; border: 1px solid #e2e8f0;
+}
+.webhooks-confirm-subtext { font-size: 12px; color: #94a3b8; margin: 0 0 20px 0; line-height: 1.4; }
+.webhooks-confirm-actions { display: flex; align-items: center; justify-content: center; gap: 10px; }
+.webhooks-confirm-actions .webhooks-btn-secondary { flex: 1; padding: 10px 14px; font-size: 13px; }
+.webhooks-confirm-danger-btn {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  background-color: #dc2626; color: #ffffff; border: none; border-radius: 8px;
+  padding: 10px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all 0.15s ease; box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
+}
+.webhooks-confirm-danger-btn:hover:not(:disabled) { background-color: #b91c1c; }
+.webhooks-confirm-danger-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+.webhooks-confirm-primary-btn {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  background-color: #4f46e5; color: #ffffff; border: none; border-radius: 8px;
+  padding: 10px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: all 0.15s ease; box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+}
+.webhooks-confirm-primary-btn:hover:not(:disabled) { background-color: #4338ca; }
+.webhooks-confirm-primary-btn:disabled { opacity: 0.7; cursor: not-allowed; }

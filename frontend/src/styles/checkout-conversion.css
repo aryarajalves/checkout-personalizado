@@ -1,0 +1,361 @@
+/* ==============================================================================
+   Estilos para Elementos de Alta Conversão no Checkout:
+   - Cronômetro de Escassez (Countdown Bar)
+   - Capa / Imagem do Produto no Resumo
+   - Seção de Depoimentos e Prova Social
+============================================================================== */
+
+/* Barra de Cronômetro de Escassez */
+.checkout-countdown-bar {
+  background: linear-gradient(90deg, #fff7ed 0%, #ffedd5 100%);
+  border-bottom: 1px solid #fed7aa;
+  padding: 10px 16px;
+  position: relative;
+  z-index: 50;
+  box-shadow: 0 2px 4px rgba(234, 88, 12, 0.06);
+  transition: all 0.3s ease;
+}
+
+.checkout-countdown-bar.is-expiring {
+  background: linear-gradient(90deg, #fef2f2 0%, #fee2e2 100%);
+  border-bottom-color: #fca5a5;
+  animation: pulse-urgent 1.5s infinite;
+}
+
+@keyframes pulse-urgent {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.92; }
+}
+
+.checkout-countdown-content {
+  max-width: 1080px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13.5px;
+}
+
+.checkout-countdown-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background-color: #ea580c;
+  color: #ffffff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.checkout-countdown-flame {
+  animation: flame-flicker 1s infinite alternate;
+}
+
+@keyframes flame-flicker {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.15); }
+}
+
+.checkout-countdown-message {
+  font-weight: 600;
+  color: #9a3412;
+}
+
+.checkout-countdown-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: #ffffff;
+  border: 1px solid #fdba74;
+  color: #c2410c;
+  font-family: monospace;
+  font-size: 14.5px;
+  font-weight: 800;
+  padding: 4px 10px;
+  border-radius: 6px;
+  letter-spacing: 0.05em;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+.checkout-countdown-bar.is-expiring .checkout-countdown-clock {
+  background-color: #ef4444;
+  color: #ffffff;
+  border-color: #dc2626;
+}
+
+/* Imagem de Capa do Produto no Resumo */
+.product-summary-cover-img {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.06);
+  flex-shrink: 0;
+}
+
+/* Seção de Depoimentos / Prova Social */
+.checkout-testimonials-section {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.checkout-testimonials-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.checkout-testimonials-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.checkout-testimonials-subtitle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #16a34a;
+}
+
+.checkout-testimonials-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.checkout-testimonial-card {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  transition: all 0.2s ease;
+}
+
+.checkout-testimonial-card:hover {
+  border-color: #cbd5e1;
+  background-color: #ffffff;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.checkout-testimonial-stars {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+.checkout-testimonial-text {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: #334155;
+  font-style: italic;
+  margin: 0 0 10px 0;
+}
+
+.checkout-testimonial-author {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkout-testimonial-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #cbd5e1;
+}
+
+.checkout-testimonial-avatar-placeholder {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #ede9fe;
+  color: #7c3aed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.checkout-testimonial-info {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.checkout-testimonial-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.checkout-testimonial-role {
+  font-size: 11px;
+  color: #64748b;
+}
+
+@media (max-width: 640px) {
+  .checkout-countdown-content {
+    font-size: 12.5px;
+    gap: 8px;
+  }
+}
+
+/* ==========================================================================
+   Seletor de DDI e Campo de Telefone Internacional
+   ========================================================================== */
+.checkout-phone-input-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background-color: #ffffff;
+  transition: all 0.15s ease;
+}
+
+.checkout-phone-input-container:focus-within {
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+}
+
+.checkout-phone-input-container.error {
+  border-color: #ef4444;
+}
+
+.checkout-ddi-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 10px 10px 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #334155;
+  border-top-left-radius: 8px;
+  border-bottom-left-radius: 8px;
+  user-select: none;
+  flex-shrink: 0;
+  transition: background-color 0.15s ease;
+}
+
+.checkout-ddi-button:hover {
+  background-color: #f8fafc;
+}
+
+.checkout-ddi-flag {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.checkout-ddi-code {
+  font-weight: 600;
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.checkout-ddi-chevron {
+  color: #94a3b8;
+  transition: transform 0.2s ease;
+}
+
+.checkout-ddi-chevron.rotate {
+  transform: rotate(180deg);
+}
+
+.checkout-ddi-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 250px;
+  max-height: 220px;
+  overflow-y: auto;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.08);
+  z-index: 50;
+  padding: 4px;
+}
+
+.checkout-ddi-option {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+  color: #334155;
+  transition: background-color 0.15s ease;
+}
+
+.checkout-ddi-option:hover {
+  background-color: #f1f5f9;
+}
+
+.checkout-ddi-option.active {
+  background-color: #e0f2fe;
+  color: #0284c7;
+  font-weight: 600;
+}
+
+.checkout-ddi-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-align: left;
+}
+
+.checkout-ddi-divider {
+  width: 1px;
+  height: 20px;
+  background-color: #e2e8f0;
+  flex-shrink: 0;
+}
+
+.checkout-phone-field-wrapper {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.checkout-phone-icon {
+  position: absolute;
+  left: 10px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.checkout-phone-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  background: transparent;
+  padding: 10px 12px 10px 32px;
+  font-size: 13.5px;
+  color: #0f172a;
+}
+

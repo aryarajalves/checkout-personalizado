@@ -20,4 +20,7 @@ boto3==1.35.30
 apscheduler==3.10.4
 # Suporte a upload de arquivos multipart/form-data no FastAPI
 python-multipart>=0.0.31
+# Gerador autônomo de QR Codes reais em SVG escaneáveis por celulares para Pix e Cripto
+qrcode>=8.0
+
 

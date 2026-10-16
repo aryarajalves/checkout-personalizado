@@ -97,17 +97,21 @@ describe('UserManagement Component Tabs', () => {
     );
 
     // Página 1 deve ter 20 itens exibidos
-    expect(await screen.findByTestId('users-pagination')).toBeInTheDocument();
-    expect(screen.getByText('Página 1 de 2')).toBeInTheDocument();
-    expect(screen.getByText(/Mostrando 1 a 20 de 25 usuários/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByTestId('users-pagination')).toBeInTheDocument();
+      expect(screen.getByText('Página 1 de 2')).toBeInTheDocument();
+      expect(screen.getByText(/Mostrando 1 a 20 de 25 usuários/i)).toBeInTheDocument();
+    });
 
     // Filtra apenas por 'user'
     const roleSelect = screen.getByTestId('filter-user-role-select');
     fireEvent.change(roleSelect, { target: { value: 'user' } });
 
     // Agora há apenas 10 usuários, cabem na Página 1 de 1
-    expect(screen.getByText('Página 1 de 1')).toBeInTheDocument();
-    expect(screen.getByText(/Mostrando 1 a 10 de 10 usuários/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Página 1 de 1')).toBeInTheDocument();
+      expect(screen.getByText(/Mostrando 1 a 10 de 10 usuários/i)).toBeInTheDocument();
+    });
 
     // Seleciona todos os usuários visíveis
     const selectAllCheckbox = screen.getByTestId('select-all-users-checkbox');
@@ -142,13 +146,13 @@ describe('UserManagement Component Tabs', () => {
     fireEvent.click(screen.getByTestId('tab-invites-btn'));
 
     expect(await screen.findByTestId('invites-pagination')).toBeInTheDocument();
-    expect(screen.getByText(/Mostrando 1 a 3 de 3 convites/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Mostrando 1 a 3 de 3 convites/i)).toBeInTheDocument();
 
     // Filtra por convites pendentes
     const statusSelect = screen.getByTestId('filter-invite-status-select');
     fireEvent.change(statusSelect, { target: { value: 'pending' } });
 
-    expect(screen.getByText(/Mostrando 1 a 1 de 1 convites/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Mostrando 1 a 1 de 1 convites/i)).toBeInTheDocument();
 
     // Seleciona o convite
     const selectAll = screen.getByTestId('select-all-invites-checkbox');

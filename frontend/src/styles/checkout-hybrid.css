@@ -1,0 +1,142 @@
+/* Estilos Modulares para Pagamento Híbrido (Pix + Cartão e 2 Cartões de Crédito) */
+
+.hybrid-split-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.hybrid-split-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.hybrid-split-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hybrid-split-presets {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.hybrid-preset-btn {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.hybrid-preset-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.hybrid-preset-btn.active {
+  background: #0284c7;
+  border-color: #0284c7;
+  color: #ffffff;
+}
+
+.hybrid-amounts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.hybrid-amount-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.hybrid-amount-label {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 600;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.hybrid-amount-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hybrid-currency-prefix {
+  font-size: 13px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.hybrid-amount-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+  background: transparent;
+}
+
+.hybrid-card-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0 12px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0369a1;
+}
+
+.hybrid-card-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e0f2fe;
+}
+
+.hybrid-card2-divider {
+  color: #d97706;
+}
+
+.hybrid-card2-divider::after {
+  background: #fef3c7;
+}
+
+.hybrid-notice {
+  font-size: 12px;
+  color: #0369a1;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+@media (max-width: 640px) {
+  .hybrid-amounts-grid {
+    grid-template-columns: 1fr;
+  }
+}

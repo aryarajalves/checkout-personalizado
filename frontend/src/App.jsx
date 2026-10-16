@@ -5,8 +5,19 @@ import Login from './components/Login';
 import UserManagement from './components/UserManagement';
 import AutomatedBackup from './components/AutomatedBackup';
 import LogManagement from './components/LogManagement';
+import GatewayManagement from './components/GatewayManagement';
+import ProductManagement from './components/ProductManagement';
+import CouponManagement from './components/CouponManagement';
+import RecoveryManagement from './components/RecoveryManagement';
+import AffiliateManagement from './components/AffiliateManagement';
+import SubscriptionManagement from './components/SubscriptionManagement';
+import SalesManagement from './components/SalesManagement';
+import ProposalManagement from './components/ProposalManagement';
 import Register from './components/Register';
 import ResetPassword from './components/ResetPassword';
+import CheckoutPage from './components/checkout/CheckoutPage';
+import CheckoutUpsellPage from './components/checkout/CheckoutUpsellPage';
+import CheckoutThankYouPage from './components/checkout/CheckoutThankYouPage';
 import LogoutConfirmModal from './components/LogoutConfirmModal';
 import { useToast } from './context/ToastContext';
 import { AUTH_EXPIRED_EVENT } from './services/authInterceptor';
@@ -97,6 +108,27 @@ function App() {
     );
   }
 
+  // Se o caminho for de upsell público (/upsell/:slug)
+  const isUpsellPage = pathname.startsWith('/upsell/');
+  if (isUpsellPage) {
+    const slug = pathname.replace('/upsell/', '').split('/')[0].split('?')[0];
+    return <CheckoutUpsellPage slug={slug} />;
+  }
+
+  // Se o caminho for de página de obrigado pública (/thank-you ou /thank-you/:orderCode)
+  const isThankYouPage = pathname.startsWith('/thank-you');
+  if (isThankYouPage) {
+    const orderCode = pathname.replace('/thank-you/', '').replace('/thank-you', '').split('/')[0].split('?')[0];
+    return <CheckoutThankYouPage orderCode={orderCode || undefined} />;
+  }
+
+  // Se o caminho for de checkout público (/pay/:slug)
+  const isCheckoutPage = pathname.startsWith('/pay/');
+  if (isCheckoutPage) {
+    const slug = pathname.replace('/pay/', '').split('/')[0].split('?')[0];
+    return <CheckoutPage slug={slug} />;
+  }
+
   // Se o usuário não está autenticado, exibe a tela de Login
   if (!user || !token) {
     return <Login onLoginSuccess={handleLoginSuccess} />;
@@ -116,6 +148,14 @@ function App() {
       <main className="main-content" aria-label="Conteúdo Principal">
         {isSuperAdmin ? (
           <>
+            {activeTab === 'products' && <ProductManagement currentUser={user} />}
+            {activeTab === 'proposals' && <ProposalManagement currentUser={user} />}
+            {activeTab === 'coupons' && <CouponManagement currentUser={user} />}
+            {activeTab === 'affiliates' && <AffiliateManagement currentUser={user} />}
+            {activeTab === 'recovery' && <RecoveryManagement currentUser={user} />}
+            {activeTab === 'sales' && <SalesManagement currentUser={user} />}
+            {activeTab === 'subscriptions' && <SubscriptionManagement currentUser={user} />}
+            {activeTab === 'gateways' && <GatewayManagement currentUser={user} />}
             {activeTab === 'users' && <UserManagement currentUser={user} />}
             {activeTab === 'backup' && <AutomatedBackup currentUser={user} />}
             {activeTab === 'logs' && <LogManagement currentUser={user} />}

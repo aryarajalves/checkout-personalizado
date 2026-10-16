@@ -1,0 +1,343 @@
+/* Estilos para o Gerador de Link de Negociação Personalizada (Propostas High-Ticket) */
+.proposals-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  color: #1e293b;
+}
+
+.proposals-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.proposals-header h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.proposals-header p {
+  color: #64748b;
+  margin: 0.25rem 0 0 0;
+  font-size: 0.925rem;
+}
+
+.btn-new-proposal {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+  border: none;
+  padding: 0.65rem 1.25rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+  transition: all 0.2s ease;
+}
+
+.btn-new-proposal:hover {
+  background: linear-gradient(135deg, #0369a1 0%, #075985 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(2, 132, 199, 0.35);
+}
+
+/* Cards de Métricas */
+.proposal-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.proposal-metric-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.proposal-metric-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.proposal-metric-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+}
+
+.proposal-metric-icon.blue {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.proposal-metric-icon.green {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.proposal-metric-icon.purple {
+  background: #f3e8ff;
+  color: #9333ea;
+}
+
+.proposal-metric-icon.amber {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.proposal-metric-info h3 {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #64748b;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.proposal-metric-value {
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0.25rem 0 0 0;
+}
+
+/* Barra de Filtros e Busca */
+.proposal-filters-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  background: #ffffff;
+  padding: 1rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.proposal-search-input {
+  flex: 1;
+  min-width: 250px;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.proposal-search-input:focus {
+  border-color: #0284c7;
+}
+
+.proposal-filter-select {
+  padding: 0.55rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: #ffffff;
+  outline: none;
+  cursor: pointer;
+}
+
+/* Tabela de Propostas */
+.proposals-table-wrapper {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow-x: auto;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.proposals-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.9rem;
+}
+
+.proposals-table th {
+  background: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.proposals-table td {
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.proposals-table tr:hover {
+  background: #f8fafc;
+}
+
+/* Badges de Status */
+.proposal-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.proposal-badge.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.proposal-badge.paid {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.proposal-badge.expired {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.proposal-badge.canceled {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* Ações na Tabela */
+.proposal-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.btn-icon-action {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-icon-action:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.btn-icon-action.whatsapp {
+  color: #16a34a;
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.btn-icon-action.whatsapp:hover {
+  background: #dcfce7;
+}
+
+.btn-icon-action.cancel {
+  color: #dc2626;
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.btn-icon-action.cancel:hover {
+  background: #fee2e2;
+}
+
+/* Banner de Proposta Exclusiva no Checkout */
+.proposal-checkout-banner {
+  background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%);
+  border: 1px solid #86efac;
+  border-radius: 12px;
+  padding: 1.15rem 1.25rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.12);
+  animation: pulse-glow 3s infinite ease-in-out;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { border-color: #86efac; }
+  50% { border-color: #38bdf8; }
+}
+
+.proposal-banner-icon {
+  font-size: 1.5rem;
+  color: #16a34a;
+  margin-top: 0.1rem;
+}
+
+.proposal-banner-content h4 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.proposal-banner-content p {
+  margin: 0.35rem 0 0 0;
+  font-size: 0.875rem;
+  color: #334155;
+  line-height: 1.4;
+}
+
+.proposal-banner-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  background: #ffffff;
+  padding: 0.3rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #0369a1;
+}
+
+.proposal-banner-expired {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  color: #991b1b;
+}
+
+.proposal-banner-expired h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+}

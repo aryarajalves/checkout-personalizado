@@ -1,15 +1,41 @@
 import React from 'react';
-import { Database, Users, LogOut, Terminal } from 'lucide-react';
+import { Database, Users, LogOut, Terminal, CreditCard, Package, Tag, RotateCcw, Share2, Repeat, BarChart3, Handshake } from 'lucide-react';
 
 export default function Sidebar({ activeTab = 'users', onSelectTab, user, onLogout }) {
   const isSuperAdmin = user?.role === 'superadmin';
 
-  // Regra: A tela de gestão de usuário, backup e logs só vai aparecer para quem é super admin
-  const menuItems = isSuperAdmin
+  // Regra: As telas de administração aparecem para quem é super admin agrupadas por categoria
+  const menuSections = isSuperAdmin
     ? [
-        { id: 'backup', label: 'Backup Automático', icon: Database },
-        { id: 'logs', label: 'Gerenciamento de logs', icon: Terminal },
-        { id: 'users', label: 'Gestão de Usuário', icon: Users },
+        {
+          id: 'catalog',
+          title: 'Catálogo & Vendas',
+          items: [
+            { id: 'products', label: 'Produtos & Ofertas', icon: Package },
+            { id: 'proposals', label: 'Propostas High-Ticket', icon: Handshake },
+            { id: 'coupons', label: 'Cupons de Desconto', icon: Tag },
+            { id: 'affiliates', label: 'Gestão de Afiliados', icon: Share2 },
+            { id: 'recovery', label: 'Recuperação de Vendas', icon: RotateCcw },
+          ],
+        },
+        {
+          id: 'finance',
+          title: 'Financeiro',
+          items: [
+            { id: 'sales', label: 'Painel de Vendas & BI', icon: BarChart3 },
+            { id: 'subscriptions', label: 'Assinaturas & MRR', icon: Repeat },
+            { id: 'gateways', label: 'Gateways & Split', icon: CreditCard },
+          ],
+        },
+        {
+          id: 'system',
+          title: 'Sistema & Segurança',
+          items: [
+            { id: 'users', label: 'Gestão de Usuário', icon: Users },
+            { id: 'backup', label: 'Backup Automático', icon: Database },
+            { id: 'logs', label: 'Gerenciamento de logs', icon: Terminal },
+          ],
+        },
       ]
     : [];
 
@@ -36,24 +62,33 @@ export default function Sidebar({ activeTab = 'users', onSelectTab, user, onLogo
           <span className="logo-text">Projeto Base</span>
         </div>
 
-        {/* Navigation Buttons (Removido 'Meus vídeos') */}
+        {/* Navigation Categorized Buttons */}
         <nav className="nav-menu">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                className={`nav-button ${isActive ? 'active' : ''}`}
-                onClick={() => handleSelect(item.id)}
-                data-testid={`nav-item-${item.id}`}
-              >
-                <Icon className="nav-icon" />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
+          {menuSections.map((section) => (
+            <div key={section.id} className="nav-section">
+              <div className="nav-section-title" data-testid={`nav-section-${section.id}`}>
+                {section.title}
+              </div>
+              <div className="nav-section-items">
+                {section.items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      className={`nav-button ${isActive ? 'active' : ''}`}
+                      onClick={() => handleSelect(item.id)}
+                      data-testid={`nav-item-${item.id}`}
+                    >
+                      <Icon className="nav-icon" />
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
       </div>
 

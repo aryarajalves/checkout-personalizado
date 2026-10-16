@@ -9,6 +9,10 @@ from app.core.database import Base, get_db
 from app.core.config import settings
 from app.core.security import get_password_hash
 from app.models.user import User, Invite, RegistrationVerification
+from app.models.gateway import GatewaySetting, SplitRecipient
+from app.models.product import Product, ProductOffer, ProductSplitRule, ProductOrderBump, ProductUpsell
+from app.models.order import Order, OrderSplit
+from app.models.webhook import ProductWebhook, WebhookDispatchLog
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///:memory:"
 
@@ -26,10 +30,9 @@ def override_get_db():
     finally:
         db.close()
 
-app.dependency_overrides[get_db] = override_get_db
-
 @pytest.fixture(autouse=True)
 def setup_database():
+    app.dependency_overrides[get_db] = override_get_db
     Base.metadata.create_all(bind=engine)
     # Seed superadmin
     db = TestingSessionLocal()
@@ -41,12 +44,28 @@ def setup_database():
         is_active=True
     )
     db.add(superadmin)
+    gw = GatewaySetting(
+        gateway_name="pagarme",
+        is_active=True,
+        environment="sandbox",
+        api_key="ak_test_12345",
+        public_key="pk_test_12345"
+    )
+    db.add(gw)
     db.commit()
     db.close()
     yield
     Base.metadata.drop_all(bind=engine)
+    app.dependency_overrides.pop(get_db, None)
 
 client = TestClient(app)
+
+def get_auth_headers():
+    res = client.post("/api/v1/auth/login", json={
+        "email": settings.SUPERADMIN_EMAIL,
+        "password": settings.SUPERADMIN_PASSWORD
+    })
+    return {"Authorization": f"Bearer {res.json()['access_token']}"}
 
 def test_health_and_root():
     res = client.get("/health")
@@ -550,6 +569,177 @@ def test_docker_logs_endpoints():
     # 3. Acesso bloqueado sem token
     unauth_res = client.get("/api/v1/logs/backend")
     assert unauth_res.status_code == 401
+
+def test_product_thank_you_url_and_order_flow():
+    """Valida cadastro de thank_you_url, retorno público, criação de pedido e consulta por order_code."""
+    headers = get_auth_headers()
+
+    # 1. Criar produto com página de obrigado personalizada
+    res = client.post("/api/v1/products/", json={
+        "name": "Curso de Tráfego Pago",
+        "slug": "curso-trafego-pago",
+        "price_brl": 197.0,
+        "thank_you_url": "https://meusite.com/obrigado-vip"
+    }, headers=headers)
+    assert res.status_code == 201
+    prod_data = res.json()
+    assert prod_data["thank_you_url"] == "https://meusite.com/obrigado-vip"
+    prod_id = prod_data["id"]
+
+    # 2. Consultar produto público pelo slug
+    pub_res = client.get("/api/v1/products/public/curso-trafego-pago")
+    assert pub_res.status_code == 200
+    assert pub_res.json()["thank_you_url"] == "https://meusite.com/obrigado-vip"
+
+    # 3. Atualizar thank_you_url
+    update_res = client.put(f"/api/v1/products/{prod_id}", json={
+        "thank_you_url": "https://meusite.com/novo-obrigado"
+    }, headers=headers)
+    assert update_res.status_code == 200
+    assert update_res.json()["thank_you_url"] == "https://meusite.com/novo-obrigado"
+
+    # 4. Processar checkout gerando pedido
+    order_res = client.post("/api/v1/checkout/process", json={
+        "slug": "curso-trafego-pago",
+        "name": "Lucas Alcantara",
+        "email": "lucas@email.com",
+        "phone": "11988887777",
+        "phone_ddi": "55",
+        "payment_method": "pix"
+    })
+    assert order_res.status_code == 201
+    order_data = order_res.json()
+    order_code = order_data["order_code"]
+    assert order_data["thank_you_url"] == "https://meusite.com/novo-obrigado"
+
+    # 5. Consultar pedido pelo código público (para alimentar a Página de Obrigado)
+    by_code_res = client.get(f"/api/v1/checkout/orders/by-code/{order_code}")
+    assert by_code_res.status_code == 200
+    code_data = by_code_res.json()
+    assert code_data["order_code"] == order_code
+    assert code_data["customer_name"] == "Lucas Alcantara"
+    assert code_data["customer_email"] == "lucas@email.com"
+    assert code_data["customer_phone"] == "11988887777"
+    assert code_data["customer_phone_ddi"] == "55"
+    assert code_data["thank_you_url"] == "https://meusite.com/novo-obrigado"
+    assert code_data["has_upsell"] is False
+    assert code_data["upsell_url"] is None
+
+def test_order_status_by_code_with_upsell_redirection():
+    """Valida fluxo de pós-venda quando o produto possui UpSell ativo."""
+    headers = get_auth_headers()
+
+    # Criar produto
+    prod = client.post("/api/v1/products/", json={
+        "name": "Ebook Principal",
+        "slug": "ebook-principal-obrigado",
+        "price_brl": 47.0,
+        "thank_you_url": "https://area.membros.com/bem-vindo"
+    }, headers=headers).json()
+
+    # Cadastrar UpSell ativo com link externo
+    upsell_res = client.post(f"/api/v1/products/{prod['id']}/upsells", json={
+        "title": "Masterclass Ao Vivo",
+        "price_brl": 97.0,
+        "is_active": True,
+        "external_url": "https://upsell.externo.com/oferta"
+    }, headers=headers)
+    assert upsell_res.status_code == 201
+
+    # Criar pedido
+    order_res = client.post("/api/v1/checkout/process", json={
+        "slug": "ebook-principal-obrigado",
+        "name": "Carla Mendes",
+        "email": "carla@email.com",
+        "phone": "21977776666",
+        "phone_ddi": "55",
+        "payment_method": "pix"
+    }).json()
+
+    order_code = order_res["order_code"]
+
+    # Consultar por código público: deve sinalizar has_upsell=True e a url do UpSell
+    by_code_res = client.get(f"/api/v1/checkout/orders/by-code/{order_code}")
+    assert by_code_res.status_code == 200
+    code_data = by_code_res.json()
+    assert code_data["has_upsell"] is True
+    assert code_data["upsell_url"] == "https://upsell.externo.com/oferta"
+    assert code_data["thank_you_url"] == "https://area.membros.com/bem-vindo"
+
+def test_order_by_code_not_found():
+    """Valida retorno 404 quando código de pedido não existe."""
+    res = client.get("/api/v1/checkout/orders/by-code/ORD-INEXISTENTE-999")
+    assert res.status_code == 404
+
+def test_product_appearance_and_conversion_elements():
+    """Valida configurações de aparência (cor, logo, timer e depoimentos) e exposição na rota pública."""
+    headers = get_auth_headers()
+
+    prod = client.post("/api/v1/products/", json={
+        "name": "Formação Especialista",
+        "slug": "formacao-especialista-vip",
+        "price_brl": 500.0,
+        "is_active": True,
+        "primary_color": "#16a34a",
+        "logo_url": "https://expert.com/logo.png",
+        "timer_enabled": True,
+        "timer_minutes": 20,
+        "timer_text": "Tempo esgotando:",
+        "testimonials": '[{"id":1,"name":"Ana","text":"Excelente!"}]'
+    }, headers=headers).json()
+
+    # Rota pública entrega todos os elementos de aparência e conversão
+    pub_res = client.get("/api/v1/products/public/formacao-especialista-vip")
+    assert pub_res.status_code == 200
+    pub_data = pub_res.json()
+    assert pub_data["primary_color"] == "#16a34a"
+    assert pub_data["logo_url"] == "https://expert.com/logo.png"
+    assert pub_data["timer_enabled"] is True
+    assert pub_data["timer_minutes"] == 20
+    assert pub_data["timer_text"] == "Tempo esgotando:"
+    assert pub_data["testimonials"] == '[{"id":1,"name":"Ana","text":"Excelente!"}]'
+
+def test_checkout_process_crypto_with_order_bump():
+    """Valida que o cálculo de amount_usd soma proporcionalmente o valor dos order bumps para pagamentos em Cripto."""
+    headers = get_auth_headers()
+
+    # 1. Cria produto com preço em BRL e USD
+    prod = client.post("/api/v1/products/", json={
+        "name": "Bussola Astrologica",
+        "slug": "bussola-astrologica-crypto-test",
+        "price_brl": 67.0,
+        "price_usd": 15.0,
+        "is_active": True
+    }, headers=headers).json()
+
+    # 2. Adiciona Order Bump de R$ 47,00
+    bump = client.post(f"/api/v1/products/{prod['id']}/order-bumps", json={
+        "title": "Material Complementar VIP",
+        "price_brl": 47.0,
+        "is_active": True
+    }, headers=headers).json()
+
+    # 3. Processa checkout com cripto incluindo o bump
+    order_res = client.post("/api/v1/checkout/process", json={
+        "slug": "bussola-astrologica-crypto-test",
+        "name": "Aryaraj Alves",
+        "email": "aryaraj@email.com",
+        "phone": "85988146141",
+        "phone_ddi": "55",
+        "payment_method": "crypto",
+        "crypto_currency": "usdt",
+        "crypto_network": "polygon",
+        "bump_ids": [bump["id"]]
+    })
+
+    assert order_res.status_code == 201
+    order_data = order_res.json()
+    assert order_data["amount_brl"] == 114.0
+    # 67 BRL = 15 USD => 114 BRL * (15 / 67) = 25.52 USD
+    assert order_data["amount_usd"] == 25.52
+    assert order_data["payment_method"] == "crypto"
+
+
 
 
 

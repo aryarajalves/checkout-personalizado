@@ -12,6 +12,8 @@ from app.models.product import Product, ProductSplitRule
 from app.models.order import Order
 from app.models.coupon import Coupon
 from app.models.webhook import ProductWebhook, WebhookDispatchLog
+from app.models.ab_test import ABTest
+from app.models.buyer_portal import BuyerAccessCode
 from app.api.v1.api import api_router
 from app.services.scheduler import setup_scheduler, scheduler
 
@@ -80,6 +82,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 app.include_router(api_router, prefix=settings.API_V1_STR)

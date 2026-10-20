@@ -7,6 +7,7 @@ import hmac
 import hashlib
 import json
 import re
+import urllib.parse
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, Tuple, List
 import httpx
@@ -134,6 +135,8 @@ def build_order_webhook_payload(order: Order, event: str, db: Session) -> Dict[s
             "crypto_wallet_address": order.crypto_wallet_address,
             "crypto_network": order.crypto_network,
             "paid_at": order.paid_at.isoformat() if order.paid_at else None,
+            "refund_reason": getattr(order, "refund_reason", None),
+            "refunded_at": order.refunded_at.isoformat() if getattr(order, "refunded_at", None) else None,
             "created_at": order.created_at.isoformat() if order.created_at else None,
         },
         "customer": {
@@ -317,6 +320,24 @@ def build_abandoned_cart_webhook_payload(cart: Any, db: Session) -> Dict[str, An
     ddi_val = getattr(cart, "customer_phone_ddi", "55") or "55"
     phone_data = format_customer_phone_fields(cart.customer_phone, ddi_val)
     recovery_slug = offer.slug if offer else (product.slug if product else "")
+    params = {}
+    if getattr(cart, "recovery_token", None):
+        params["recover"] = cart.recovery_token
+    if getattr(cart, "customer_name", None):
+        params["name"] = cart.customer_name
+    if getattr(cart, "customer_email", None):
+        params["email"] = cart.customer_email
+    if getattr(cart, "customer_phone", None):
+        params["phone"] = cart.customer_phone
+    if getattr(cart, "customer_phone_ddi", None) and cart.customer_phone_ddi != "55":
+        params["phone_ddi"] = cart.customer_phone_ddi
+    if getattr(cart, "customer_cpf", None):
+        params["cpf"] = cart.customer_cpf
+    if getattr(cart, "coupon_code", None):
+        params["coupon"] = cart.coupon_code
+
+    rec_query = urllib.parse.urlencode(params)
+    rec_url = f"/pay/{recovery_slug}?{rec_query}" if rec_query else f"/pay/{recovery_slug}"
 
     return {
         "event": "Abandono de Checkout",
@@ -326,7 +347,7 @@ def build_abandoned_cart_webhook_payload(cart: Any, db: Session) -> Dict[str, An
         "cart": {
             "id": cart.id,
             "recovery_token": cart.recovery_token,
-            "recovery_url": f"/pay/{recovery_slug}?recover={cart.recovery_token}",
+            "recovery_url": rec_url,
             "estimated_amount_brl": cart.estimated_amount_brl,
             "coupon_code": cart.coupon_code,
             "status": "Abandono de Checkout",

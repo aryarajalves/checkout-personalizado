@@ -9,6 +9,9 @@ import {
   Share2,
   Sliders,
   Palette,
+  Globe,
+  Zap,
+  GitFork,
 } from 'lucide-react';
 
 export default function ProductActionsDropdown({
@@ -17,8 +20,11 @@ export default function ProductActionsDropdown({
   onManageOrderBumps,
   onManageUpsell,
   onManageAppearance,
+  onManageConversion,
+  onManageDomain,
   onManageWebhooks,
   onConfigureSplit,
+  onManageABTest,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [coords, setCoords] = useState({ top: 0, right: 0, openUp: false });
@@ -88,7 +94,7 @@ export default function ProductActionsDropdown({
     if (callback) callback(product);
   };
 
-  const hasPixel = Boolean(product?.meta_pixel_id);
+  const hasPixel = Boolean(product?.meta_pixel_id || product?.google_ads_id || product?.tiktok_pixel_id);
   const hasSplit = Boolean(product?.split_rules && product.split_rules.length > 0);
 
   return (
@@ -267,8 +273,81 @@ export default function ProductActionsDropdown({
               <Palette size={14} color="#8b5cf6" />
               <span style={{ fontWeight: 500 }}>Aparência do Checkout</span>
             </div>
-            {product?.primary_color && product.primary_color !== '#0284c7' && (
-              <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: product.primary_color }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '9.5px', backgroundColor: '#ede9fe', color: '#6d28d9', padding: '1px 5px', borderRadius: '4px', fontWeight: 700 }}>
+                Ao Vivo
+              </span>
+              {product?.primary_color && product.primary_color !== '#0284c7' && (
+                <span style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: product.primary_color }} />
+              )}
+            </div>
+          </button>
+
+          {/* Item: Domínio Próprio (CNAME) */}
+          <button
+            type="button"
+            onClick={() => handleAction(onManageDomain)}
+            data-testid={`btn-domain-${product.id}`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              padding: '8px 10px',
+              border: 'none',
+              background: 'none',
+              borderRadius: '6px',
+              fontSize: '13px',
+              color: '#1e293b',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'background-color 0.15s',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Globe size={14} color="#0284c7" />
+              <span style={{ fontWeight: 500 }}>Domínio Próprio (CNAME)</span>
+            </div>
+            {product?.custom_domain && (
+              <span style={{ fontSize: '10px', backgroundColor: '#e0f2fe', color: '#0369a1', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                Ativo
+              </span>
+            )}
+          </button>
+
+          {/* Item: Gatilhos & Conversão */}
+          <button
+            type="button"
+            onClick={() => handleAction(onManageConversion)}
+            data-testid={`btn-conversion-${product.id}`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              padding: '8px 10px',
+              border: 'none',
+              background: 'none',
+              borderRadius: '6px',
+              fontSize: '13px',
+              color: '#1e293b',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'background-color 0.15s',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Zap size={14} color="#f59e0b" />
+              <span style={{ fontWeight: 500 }}>Gatilhos & Conversão</span>
+            </div>
+            {(product?.enable_exit_intent || product?.enable_social_proof) && (
+              <span style={{ fontSize: '10px', backgroundColor: '#fef3c7', color: '#b45309', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                Ativo
+              </span>
             )}
           </button>
 
@@ -331,6 +410,40 @@ export default function ProductActionsDropdown({
             {hasSplit && (
               <span style={{ fontSize: '10px', backgroundColor: '#f3e8ff', color: '#6b21a8', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
                 Configurado
+              </span>
+            )}
+          </button>
+
+          {/* Item 6: Teste A/B de Ofertas */}
+          <button
+            type="button"
+            onClick={() => handleAction(onManageABTest)}
+            data-testid={`btn-abtest-${product.id}`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              padding: '8px 10px',
+              border: 'none',
+              background: 'none',
+              borderRadius: '6px',
+              fontSize: '13px',
+              color: '#1e293b',
+              cursor: 'pointer',
+              textAlign: 'left',
+              transition: 'background-color 0.15s',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <GitFork size={14} color="#ec4899" />
+              <span style={{ fontWeight: 500 }}>Teste A/B de Ofertas</span>
+            </div>
+            {product?.has_ab_test && (
+              <span style={{ fontSize: '10px', backgroundColor: '#fdf2f8', color: '#be185d', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                Ativo
               </span>
             )}
           </button>

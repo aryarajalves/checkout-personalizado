@@ -12,7 +12,7 @@ describe('LogManagement Component', () => {
 
   const mockLogsBackend = {
     service: 'backend',
-    container: 'projeto_base_backend',
+    container: 'checkout_backend',
     available: true,
     logs: [
       '[INFO] [projeto_base]: Servidor iniciado com sucesso.',
@@ -25,7 +25,7 @@ describe('LogManagement Component', () => {
 
   const mockLogsFrontend = {
     service: 'frontend',
-    container: 'projeto_base_frontend',
+    container: 'checkout_frontend',
     available: true,
     logs: [
       '172.31.0.1 - - [29/Sep/2026:17:59:35 +0000] "GET /assets/index.js HTTP/1.1" 200 450',
@@ -230,5 +230,33 @@ describe('LogManagement Component', () => {
       expect(startTimeInput).toHaveValue('');
       expect(endTimeInput).toHaveValue('');
     });
+  });
+
+  it('renders white theme layout with light cards and readable styles', async () => {
+    setupFetchMock();
+    render(
+      <ToastProvider>
+        <LogManagement currentUser={{ role: 'superadmin' }} />
+      </ToastProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('terminal-container')).toBeInTheDocument();
+    });
+
+    const terminalContainer = screen.getByTestId('terminal-container');
+    expect(terminalContainer.style.backgroundColor).toBe('rgb(255, 255, 255)');
+
+    const terminalBody = screen.getByTestId('terminal-logs-body');
+    expect(terminalBody).toBeInTheDocument();
+    expect(terminalBody.style.backgroundColor).toBe('rgb(255, 255, 255)');
+
+    const dateFilterBar = screen.getByTestId('log-date-filter-bar');
+    expect(dateFilterBar).toBeInTheDocument();
+    expect(dateFilterBar.style.backgroundColor).toBe('rgb(255, 255, 255)');
+
+    const typeFilterBar = screen.getByTestId('log-type-filter-bar');
+    expect(typeFilterBar).toBeInTheDocument();
+    expect(typeFilterBar.style.backgroundColor).toBe('rgb(255, 255, 255)');
   });
 });

@@ -1,43 +1,31 @@
 import React from 'react';
-import { Database, Users, LogOut, Terminal, CreditCard, Package, Tag, RotateCcw, Share2, Repeat, BarChart3, Handshake } from 'lucide-react';
+import {
+  BarChart3,
+  Package,
+  CreditCard,
+  Settings,
+  LogOut,
+} from 'lucide-react';
 
-export default function Sidebar({ activeTab = 'users', onSelectTab, user, onLogout }) {
+export default function Sidebar({ activeTab = 'sales', onSelectTab, user, onLogout, onOpenSettings }) {
   const isSuperAdmin = user?.role === 'superadmin';
 
-  // Regra: As telas de administração aparecem para quem é super admin agrupadas por categoria
-  const menuSections = isSuperAdmin
+  const navItems = isSuperAdmin
     ? [
-        {
-          id: 'catalog',
-          title: 'Catálogo & Vendas',
-          items: [
-            { id: 'products', label: 'Produtos & Ofertas', icon: Package },
-            { id: 'proposals', label: 'Propostas High-Ticket', icon: Handshake },
-            { id: 'coupons', label: 'Cupons de Desconto', icon: Tag },
-            { id: 'affiliates', label: 'Gestão de Afiliados', icon: Share2 },
-            { id: 'recovery', label: 'Recuperação de Vendas', icon: RotateCcw },
-          ],
-        },
-        {
-          id: 'finance',
-          title: 'Financeiro',
-          items: [
-            { id: 'sales', label: 'Painel de Vendas & BI', icon: BarChart3 },
-            { id: 'subscriptions', label: 'Assinaturas & MRR', icon: Repeat },
-            { id: 'gateways', label: 'Gateways & Split', icon: CreditCard },
-          ],
-        },
-        {
-          id: 'system',
-          title: 'Sistema & Segurança',
-          items: [
-            { id: 'users', label: 'Gestão de Usuário', icon: Users },
-            { id: 'backup', label: 'Backup Automático', icon: Database },
-            { id: 'logs', label: 'Gerenciamento de logs', icon: Terminal },
-          ],
-        },
+        { id: 'sales', label: 'Vendas & Comercial', icon: BarChart3 },
+        { id: 'products', label: 'Produtos & Marketing', icon: Package },
+        { id: 'finance', label: 'Financeiro', icon: CreditCard },
+        { id: 'system', label: 'Configurações & Sistema', icon: Settings },
       ]
     : [];
+
+  const getActiveNavId = () => {
+    if (['sales', 'overview', 'orders', 'utm_bi', 'recovery', 'proposals'].includes(activeTab)) return 'sales';
+    if (['products', 'catalog', 'coupons', 'affiliates'].includes(activeTab)) return 'products';
+    if (['finance', 'subscriptions', 'gateways'].includes(activeTab)) return 'finance';
+    if (['system', 'users', 'logs', 'backup'].includes(activeTab)) return 'system';
+    return activeTab;
+  };
 
   const handleSelect = (id) => {
     if (onSelectTab) {
@@ -59,20 +47,20 @@ export default function Sidebar({ activeTab = 'users', onSelectTab, user, onLogo
               <path d="M8 5v14l11-7z" />
             </svg>
           </div>
-          <span className="logo-text">Projeto Base</span>
+          <span className="logo-text">Checkout Jords</span>
         </div>
 
-        {/* Navigation Categorized Buttons */}
+        {/* Navigation Modules */}
         <nav className="nav-menu">
-          {menuSections.map((section) => (
-            <div key={section.id} className="nav-section">
-              <div className="nav-section-title" data-testid={`nav-section-${section.id}`}>
-                {section.title}
+          {isSuperAdmin && (
+            <div className="nav-section">
+              <div className="nav-section-title" data-testid="nav-section-main">
+                Módulos Principais
               </div>
               <div className="nav-section-items">
-                {section.items.map((item) => {
+                {navItems.map((item) => {
                   const Icon = item.icon;
-                  const isActive = activeTab === item.id;
+                  const isActive = getActiveNavId() === item.id;
                   return (
                     <button
                       key={item.id}
@@ -88,7 +76,7 @@ export default function Sidebar({ activeTab = 'users', onSelectTab, user, onLogo
                 })}
               </div>
             </div>
-          ))}
+          )}
         </nav>
       </div>
 
@@ -100,6 +88,17 @@ export default function Sidebar({ activeTab = 'users', onSelectTab, user, onLogo
             <span className="user-name">{userName}</span>
             <span className="user-email">{userEmail}</span>
           </div>
+          {onOpenSettings && (
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className="settings-button"
+              title="Configurações e Dados Financeiros"
+              data-testid="sidebar-settings-btn"
+            >
+              <Settings size={16} />
+            </button>
+          )}
           {onLogout && (
             <button
               onClick={onLogout}

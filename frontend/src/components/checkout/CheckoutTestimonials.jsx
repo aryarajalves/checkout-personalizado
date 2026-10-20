@@ -58,12 +58,18 @@ export default function CheckoutTestimonials({ testimonials }) {
                   src={t.avatar_url}
                   alt={t.name}
                   className="checkout-testimonial-avatar"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    if (e.target.nextSibling) e.target.nextSibling.style.display = 'flex';
+                  }}
                 />
-              ) : (
-                <div className="checkout-testimonial-avatar-placeholder">
-                  {t.name ? t.name.charAt(0).toUpperCase() : <User size={14} />}
-                </div>
-              )}
+              ) : null}
+              <div
+                className="checkout-testimonial-avatar-placeholder"
+                style={{ display: t.avatar_url ? 'none' : 'flex' }}
+              >
+                {t.name ? t.name.charAt(0).toUpperCase() : <User size={14} />}
+              </div>
               <div className="checkout-testimonial-info">
                 <span className="checkout-testimonial-name">{t.name}</span>
                 {t.role && (

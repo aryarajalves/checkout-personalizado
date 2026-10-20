@@ -25,6 +25,10 @@ Este documento consolida todos os módulos necessários para transformar o **Che
 - [x] **Assinaturas & Cobrança Recorrente (`/subscriptions`):** Cadastro de ofertas recorrentes (mensal, trimestral, semestral, anual), painel com métricas de MRR e assinantes ativos, histórico de faturas e ações de cancelamento/pausa.
 - [x] **Co-Produção com Prazo de Contrato (`valid_until`):** Suporte a datas limites em regras de split, expiração automática da cota no momento do checkout e reintegração da porcentagem ao produtor principal.
 - [x] **Pagamento Híbrido ("Pix + Cartão" e "2 Cartões de Crédito"):** Divisão flexível entre entrada Pix + parcelamento no Cartão ou entre 2 Cartões de Crédito diferentes, validação transacional estrita de soma, tabela dedicada `order_payments` e interface dinâmica no checkout com recálculo automático em tempo real.
+- [x] **Escudo Anti-Carding, Velocity Check & Blacklist Própria (#10):** Limite de tentativas configurável (padrão $\ge$ 5 falhas em 10 min), bloqueio preventivo de robôs testadores de cartão com direcionamento suave ao Pix, auditoria em tempo real e Blacklist centralizada com bloqueio automático em chargebacks.
+- [x] **Fallback Inteligente de Cartão Recusado (#5):** Modal instantâneo no checkout acionado em recusas de cartão (HTTP 402 `card_declined`), conversão em 1 clique para Pix com desconto extra configurável por produto (`card_fallback_discount_percent`), transição suave para pagamento híbrido (Pix + Cartão ou 2 Cartões) e limpeza segura de campos para tentar outro cartão preservando dados pessoais.
+- [x] **Endereço de Cobrança & Antifraude (ViaCEP) (#21):** Configuração por produto (`require_billing_address`), autocompletar em milissegundos via ViaCEP com fallback no backend, preenchimento dinâmico de rua, bairro, cidade e estado, validação transacional e exibição inteligente exclusiva para pagamentos via Cartão de Crédito e Híbridos (preservando Pix e Cripto rápidos sem atrito).
+- [x] **Boleto Parcelado & Pix Parcelado via Asaas (#6):** Carnê Digital com entrada via Pix para aprovação imediata do acesso, parcelamento mensal em até 24x no Asaas com BolePix, split entre cotistas, polling automático e webhooks de controle de parcelas e inadimplência.
 
 ---
 
@@ -42,51 +46,56 @@ Este documento consolida todos os módulos necessários para transformar o **Che
   - Disparo **Server-Side** (direto pelo Backend FastAPI para a Graph API da Meta) dos eventos `InitiateCheckout` e `Purchase` com desduplicação (`event_id`) assim que o pagamento é confirmado via webhook.
   - Testes unitários Backend e Frontend.
 
-#### #2. Link de Checkout Pré-Preenchido + Auto-Cupom via URL (1-Click Lead Checkout)
+#### ✅ #2. Link de Checkout Pré-Preenchido + Auto-Cupom via URL (1-Click Lead Checkout) [CONCLUÍDO]
 - **Objetivo:** Dobrar a conversão nas vendas de WhatsApp (X1 / Closers) e nos links de recuperação de carrinho abandonado, eliminando a redigitação de dados.
-- **Entregáveis:**
-  - Leitura automática de Query Params na URL do checkout: `?name=...&email=...&phone=...&cpf=...&coupon=VIP10`.
-  - Preenchimento instantâneo dos campos do comprador, avanço automático para a seleção de pagamento e aplicação automática do cupom de desconto com feedback visual na tela.
-  - Geração automática desse link pré-preenchido nos disparos de webhook de `checkout.abandoned` e no botão de recuperação via WhatsApp do painel.
-  - Testes unitários Frontend.
+- **Entregáveis Concluídos:**
+  - **Leitura Universal de Query Params:** Suporte no checkout para `?name=...&email=...&phone=...&cpf=...&coupon=...&recover=...` com preenchimento instantâneo dos campos e máscara automática de telefone/CPF.
+  - **Auto-Aplicação de Cupons:** Validação instantânea do cupom passado na URL com recálculo imediato do total a pagar e feedback visual em toast verde.
+  - **Badge de Pré-preenchimento:** Indicador visual verde *"✓ Pré-preenchido"* no cabeçalho do formulário de dados pessoais quando ativado via link.
+  - **Integração na Recuperação de Vendas (`/recovery`):** O botão de WhatsApp no painel admin enriquece automaticamente o link com os dados do lead e o cupom de recuperação.
+  - **Endpoint de Recuperação por Token:** Rota `/api/v1/recovery/cart-by-token/{token}` pública para carregamento seguro dos dados do carrinho abandonado.
+  - **Testes Unitários:** 100% aprovados (Backend Pytest: 5 testes em `test_prefilled_checkout_recovery.py` | Frontend Vitest: 5 testes em `usePreFilledCheckout.test.jsx`).
 
-#### #3. Desconto Automático por Método de Pagamento (Incentivo ao Pix e Cripto)
+#### #3. Desconto Automático por Método de Pagamento (Incentivo ao Pix e Cripto) [CONCLUÍDO ✅]
 - **Objetivo:** Migrar até 30% dos compradores do Cartão para o Pix ou Cripto, garantindo recebimento à vista, taxa menor e risco zero de chargeback.
 - **Entregáveis:**
   - Configuração no produto de percentual de desconto exclusivo para **Pix** (`pix_discount_percent`) e/ou **Cripto** (`crypto_discount_percent`).
-  - Badge visual pulsante na aba do método de pagamento: `"ECONOMIZE X% (R$ Y) PAGANDO NO PIX"`.
-  - Recálculo automático do valor da ordem e das cotas de split quando o comprador seleciona Pix ou Cripto.
-  - Testes unitários Backend e Frontend.
+  - Badge visual de alto impacto nas abas dos métodos de pagamento: `"🔥 X% OFF"` no Pix e `"⚡ Y% OFF"` em Cripto.
+  - Recálculo dinâmico em tempo real do resumo do pedido, linha de desconto dedicada e valor a pagar nos botões de finalização.
+  - Validação rigorosa no Backend (FastAPI), cobrança do valor líquido com desconto no Pagar.me / NOWPayments e recálculo proporcional automático das cotas de split dos co-produtores.
+  - Suíte completa de testes unitários Backend (Pytest) e Frontend (Vitest).
 
-#### #4. Regras de Parcelamento no Cartão + Simulador de Taxas e Lucro Líquido do Split
+#### #4. Regras de Parcelamento no Cartão + Simulador de Taxas e Lucro Líquido do Split [CONCLUÍDO ✅]
 - **Objetivo:** Permitir parcelamento em até 12x protegendo a margem do produtor e dando clareza exata de quanto cada sócio receberá líquido.
-- **Entregáveis:**
+- **Entregáveis Concluídos:**
   - Configuração por produto do máximo de parcelas (1x a 12x), parcelas sem juros e repasse de juros ao comprador vs absorção pelo produtor.
-  - **Calculadora/Simulador em Tempo Real no Painel:** Tabela dentro da configuração do produto/split mostrando exatamente quanto sobra líquido para cada sócio em vendas no Pix, 1x no Cartão, 12x no Cartão, Boleto Parcelado ou Cripto.
-  - Testes unitários Backend e Frontend.
+  - **Calculadora/Simulador em Tempo Real no Painel:** Tabela dentro da configuração do produto/split mostrando exatamente quanto sobra líquido para cada sócio em vendas no Pix, 1x no Cartão, 6x, 12x no Cartão e Cripto.
+  - Suíte completa de testes unitários Backend (Pytest) e Frontend (Vitest).
 
-#### #5. Fallback Inteligente de Cartão Recusado (Recuperação Instantânea na Tela)
+#### ✅ #5. Fallback Inteligente de Cartão Recusado (Recuperação Instantânea na Tela) [CONCLUÍDO]
 - **Objetivo:** Salvar na hora de 15% a 25% das vendas cujo cartão de crédito é negado pelo banco ou por falta de limite.
-- **Entregáveis:**
-  - Modal inteligente acionado no exato momento em que o cartão retorna recusado (`card_declined`).
-  - Oferta imediata de conversão em 1 clique: *"Seu banco recusou a transação? Finalize agora via **Pix com +X% de desconto extra** ou **divida em 2 cartões / Pix + Cartão**!"*.
-  - Geração instantânea do QR Code Pix reaproveitando todos os dados já preenchidos.
-  - Testes unitários Backend e Frontend.
+- **Entregáveis Concluídos:**
+  - **Modal Inteligente de Recuperação:** Acionado instantaneamente quando o cartão retorna recusado (`card_declined` / HTTP 402), sem perda de contexto ou recarregamento.
+  - **Conversão em 1-Clique para Pix:** Oferta com desconto exclusivo configurável (`card_fallback_discount_percent`), gerando cobrança imediata aproveitando todos os dados preenchidos.
+  - **Transição Suave para Pagamento Híbrido:** Opções diretas para alternar para Pix + Cartão ou 2 Cartões de Crédito para contornar limites bancários.
+  - **Tentativa com Outro Cartão:** Limpeza focada apenas dos dados do cartão, preservando os dados pessoais do comprador.
+  - **Configuração no Painel:** Toggle de ativação e percentual de desconto no modal de conversão do produto.
+  - **Testes Unitários:** 100% aprovados (Backend Pytest: 5 testes em `test_card_declined_fallback.py` | Frontend Vitest: 13 testes em `CardDeclinedFallbackModal.test.jsx` e `useCardDeclinedFallback.test.js`).
 
 ---
 
 ### 🟠 PRIORIDADE 2: Novos Meios de Pagamento, Contingência Multi-Gateway & High-Ticket
 *(Destravar vendas para clientes sem limite no cartão e blindar a operação contra quedas e fraudes)*
 
-#### #6. Sistema de Boleto Parcelado & Pix Parcelado via Asaas (Carnê Digital + Entrada Pix)
+#### ✅ #6. Sistema de Boleto Parcelado & Pix Parcelado via Asaas (Carnê Digital + Entrada Pix) [CONCLUÍDO]
 - **Objetivo:** Aumentar em 20% a 35% as vendas de médio e alto ticket (R$ 497 a R$ 10.000) para clientes sem limite no cartão de crédito.
-- **Entregáveis:**
-  - Integração do gateway **Asaas** no módulo "Gateways & Split" (API Key Sandbox/Produção, Token de Webhook e `walletId` dos recebedores).
-  - Aba **"Boleto / Pix Parcelado"** no checkout com parcelamento configurável (até 12x ou 24x).
-  - Modalidade **"Entrada no Pix + Parcelas no Boleto/BolePix"**: O comprador paga a 1ª parcela (ou entrada) via Pix imediato para liberar o acesso na hora, e o Asaas gera o carnê mensal das demais parcelas (cada boleto já vem com QR Code Pix embutido).
-  - Split automático no Asaas distribuindo a porcentagem de cada sócio a cada parcela paga.
-  - Webhooks de controle de parcelas: `order.installment_paid` e `order.installment_overdue` (para bloqueio automático de inadimplentes na área de membros/n8n).
-  - Testes unitários Backend e Frontend.
+- **Entregáveis Concluídos:**
+  - **Integração do Gateway Asaas:** Card dedicado no módulo "Gateways & Split" com suporte a chave de API ($aact_...), ambiente Sandbox/Produção, token de webhook e `asaas_wallet_id` dos recebedores para split automático.
+  - **Configuração no Produto:** Habilitação individual no cadastro/edição do produto (`enable_asaas_installments`), limite de parcelas (`asaas_max_installments` até 24x), taxa de juros mensal opcional (`asaas_interest_percent`) e exigência de entrada no Pix (`asaas_require_entry_pix`).
+  - **Aba "Boleto Parcelado" no Checkout:** Aba com ícone dedicado e seletor interativo de parcelas com cálculo dinâmico de juros e detalhamento claro do plano (1ª Parcela Entrada Pix + Parcelas Mensais no Carnê).
+  - **Tela Pós-Compra de Carnê Digital:** Exibição imediata do QR Code e Pix Copia e Cola para quitação da 1ª parcela de entrada, polling automático de status com liberação instantânea e listagem completa do cronograma de parcelas com link para download/visualização do carnê no Asaas.
+  - **Webhooks de Gestão de Inadimplência:** Endpoint `/api/v1/webhooks/asaas` tratando eventos `PAYMENT_CONFIRMED`, `PAYMENT_OVERDUE` e `PAYMENT_REFUNDED`, atualizando parcelas na tabela `order_installments` e disparando webhooks externos (`order.paid`, `order.installment_paid`, `order.installment_overdue`).
+  - **Testes Unitários:** 100% aprovados (Backend Pytest: 5 testes em `test_asaas_installments.py` | Frontend Vitest: testes em `CheckoutAsaasInstallmentForm.test.jsx`, `ProductAsaasInstallmentFields.test.jsx`, `CheckoutAsaasCarnetPayment.test.jsx` e `CheckoutPaymentMethods.test.jsx`).
 
 #### #7. Contingência Automática Multi-Gateway (Smart Failover / Retentativa Transparente)
 - **Objetivo:** Garantir que o checkout nunca perca uma venda se um gateway cair ou recusar um cartão por falso-positivo de antifraude.
@@ -104,31 +113,36 @@ Este documento consolida todos os módulos necessários para transformar o **Che
   - Controle transacional unificado: O pedido principal só muda para `Compra Aprovada` quando ambas as partes são confirmadas.
   - Testes unitários Backend e Frontend.
 
-#### #9. Gerador de "Link de Negociação Personalizada" (Para Closers / Vendas High-Ticket)
+#### ✅ #9. Gerador de "Link de Negociação Personalizada" (Para Closers / Vendas High-Ticket) [CONCLUÍDO]
 - **Objetivo:** Permitir que o time comercial feche acordos sob medida no WhatsApp/Zoom mantendo o Split automático dos sócios.
 - **Entregáveis:**
   - Tela/Modal **"Gerar Proposta Individual"** no painel admin.
   - Definição rápida de: Produto, Nome/Telefone do Cliente, Valor Fechado, Condição Especial (ex: R$ 1.000 de entrada no Pix + 6x de R$ 400 no Cartão ou Boleto) e Prazo de Expiração do link (ex: 24h).
   - Testes unitários Backend e Frontend.
 
-#### #10. Escudo Anti-Carding, Velocity Check & Blacklist Própria (Proteção de Conta no Gateway)
+#### ✅ #10. Escudo Anti-Carding, Velocity Check & Blacklist Própria (Proteção de Conta no Gateway) [CONCLUÍDO]
 - **Objetivo:** Impedir que robôs testadores de cartões clonados ("carding") derrubem sua taxa de aprovação ou bloqueiem sua conta no Pagar.me/Asaas.
-- **Entregáveis:**
-  - **Velocity Check:** Bloqueio automático temporário da opção de Cartão se o mesmo IP, CPF ou dispositivo tiver 3 cartões recusados em menos de 10 minutos (forçando apenas Pix ou Cripto).
-  - **Blacklist no Painel:** Bloqueio manual ou automático de CPFs, e-mails, telefones e IPs que já aplicaram chargeback no passado.
-  - Testes unitários Backend e Frontend.
+- **Entregáveis Concluídos:**
+  - **Velocity Check:** Bloqueio preventivo automático temporário da opção de cartão se o mesmo IP, CPF ou e-mail tiver 5 tentativas recusadas em menos de 10 minutos (configurável pelo produtor), retornando HTTP 429 e orientando o comprador a concluir o pagamento imediatamente via Pix/Cripto.
+  - **Blacklist Centralizada no Painel Admin:** Aba "Escudo de Segurança & Blacklist" no System Hub para bloqueio manual de CPFs, e-mails, telefones e IPs, com busca dinâmica, filtro por tipo, toggle de ativação/desativação e exclusão com modal de confirmação.
+  - **Auditoria de Tentativas de Cartão (Logs):** Aba em tempo real registrando o histórico de transações recusadas, bloqueadas pelo escudo ou aprovadas com identificação de IP, e-mail, CPF, 4 últimos dígitos do cartão e bandeira.
+  - **Auto-Blacklist em Chargebacks:** Bloqueio preventivo automático instantâneo do CPF, e-mail e telefone do comprador ao receber webhook de estorno/chargeback do gateway.
+  - **Testes Unitários:** 100% aprovados (Backend Pytest: 5 testes dedicados em `test_anti_carding_security.py` | Frontend Vitest: 5 testes em `SecurityManagement.test.jsx` + 3 testes em `SystemHub.test.jsx`).
 
 ---
 
 ### 🟡 PRIORIDADE 3: Funil de Lucro Máximo (1-Click Buy), Retenção na Página & Humanização
 *(Aumentar o ticket médio por comprador e segurar indecisos dentro do checkout)*
 
-#### #11. Upsell & Downsell Real em 1 Clique (Tokenização de Cartão + Funil Completo)
+#### ✅ #11. Upsell & Downsell Real em 1 Clique (Tokenização de Cartão + Funil Completo) [CONCLUÍDO]
 - **Objetivo:** Fazer o cliente comprar ofertas pós-compra com 1 único clique sem precisar digitar o cartão novamente, e recuperar quem recusa o Upsell.
-- **Entregáveis:**
-  - **One-Click Buy no Cartão:** Armazenamento seguro do `card_token` / `customer_id` da compra principal para debitar o Upsell/Downsell instantaneamente em 1 clique.
-  - **Fluxo com Downsell:** Compra Principal ➔ **Upsell** ➔ Se clicar em *"Não, obrigado"*, redireciona para o **Downsell** (oferta mais acessível) ➔ **Página de Obrigado**.
-  - Testes unitários Backend e Frontend.
+- **Entregáveis Concluídos:**
+  - **One-Click Buy no Cartão:** Armazenamento seguro do `card_token` da compra principal para debitar o Upsell/Downsell instantaneamente em 1 clique sem reinserir dados.
+  - **Pix Instantâneo (Opção A):** Modal com QR Code e Copia e Cola automático para compradores de Pix com fallback para cartão.
+  - **Vínculo com Catálogo:** Ambos integrados aos produtos e ofertas existentes (`upsell_product_id`, `upsell_offer_id`, `downsell_product_id`, `downsell_offer_id`) com cálculo independente de splits de pagamento.
+  - **Fluxo com Downsell:** Compra Principal ➔ **Upsell** ➔ Se clicar em *"Não, obrigado"*, redireciona suavemente para o **Downsell** (oferta mais acessível) ➔ **Página de Obrigado**.
+  - **Testes Unitários:** 100% aprovados (Backend Pytest: 80 testes | Frontend Vitest: 257 testes).
+
 
 #### #12. Exit-Intent Popup (Desconto de Última Chance) & Prova Social Ao Vivo
 - **Objetivo:** Segurar o visitante indeciso que tenta fechar a aba do checkout e gerar senso de urgência real.
@@ -137,11 +151,13 @@ Este documento consolida todos os módulos necessários para transformar o **Che
   - **Notificações Ao Vivo:** Balões discretos no canto da tela (*"Gabriel de Curitiba acabou de adquirir via Pix"*) configuráveis por produto.
   - Testes unitários Frontend.
 
-#### #13. Vídeo de Vendas (Mini-VSL) & Player de Áudio estilo WhatsApp no Topo do Checkout
+#### ✅ #13. Vídeo de Vendas (Mini-VSL) & Player de Áudio estilo WhatsApp no Topo do Checkout [CONCLUÍDO]
 - **Objetivo:** Humanizar o checkout e quebrar objeções finais com a voz ou vídeo do expert.
-- **Entregáveis:**
-  - Opção no produto para incorporar um **Vídeo Curto** (YouTube/Vimeo/PandaVideo/MP4) ou um **Player de Áudio estilo mensagem de voz do WhatsApp** (com foto do expert e ondas sonoras) no topo do checkout.
-  - Testes unitários Frontend.
+- **Entregáveis Concluídos:**
+  - **Mini-VSL (Vídeo):** Incorporação de vídeo responsivo (YouTube com conversão automática para embed, Vimeo, PandaVideo ou MP4 com player HTML5) no topo do checkout.
+  - **Player de Áudio Estilo WhatsApp:** Humanização com nota de voz gravada pelo expert, avatar circular com badge de microfone, botão gradiente de play/pause, barras de ondas sonoras com seek interativo, alternador de velocidade (1x, 1.5x, 2x) e checks azuis.
+  - **Configuração no Checkout Builder:** Aba dedicada "Vídeo / Áudio" com alternância de tipo e visualização em tempo real no Live Preview (Desktop & Mobile).
+  - **Testes Unitários:** 100% aprovados (Backend Pytest: 84 testes | Frontend Vitest: 270 testes).
 
 #### #14. Notificação "Cha-Ching" em Tempo Real para os Sócios (Alertas de Venda com Cota do Split)
 - **Objetivo:** Avisar os sócios em tempo real a cada Pix gerado ou venda aprovada, já informando o lucro individual de cada um.
@@ -155,30 +171,42 @@ Este documento consolida todos os módulos necessários para transformar o **Che
 ### 🔵 PRIORIDADE 4: Autoatendimento do Aluno, Co-Produção com Prazo, Multi-Tráfego & Testes A/B
 *(Reduzir suporte a zero, automatizar contratos de parceiros e escalar tráfego)*
 
-#### #15. Central Rápida do Comprador (`/minhas-compras` — 2ª Via de Boleto/Pix sem Suporte)
-- **Objetivo:** Evitar que compradores de Boleto Parcelado ou Assinaturas chamem o suporte todo mês para pedir segunda via de boleto ou código Pix.
-- **Entregáveis:**
-  - Página pública Clean White (`/my-orders`) onde o aluno consulta seus pedidos/parcelas informando e-mail e CPF.
-  - Cópia imediata do Pix da parcela do mês, download da 2ª via do boleto Asaas e troca de cartão da assinatura.
-  - Testes unitários Backend e Frontend.
+#### ✅ #15. Central Rápida do Comprador (`/minhas-compras` — 2ª Via de Pix/Boleto, Área de Membros e Gestão de Assinatura) [CONCLUÍDO]
+- **Objetivo:** Evitar que compradores chamem o suporte para pedir 2ª via de código Pix, links de acesso a membros ou alteração de cartão de assinaturas.
+- **Entregáveis Concluídos:**
+  - **Portal Público Clean (`/minhas-compras` e `/my-orders`):** Autenticação segura e sem atrito via código temporário OTP de 6 dígitos enviado ao e-mail do comprador (válido por 15 minutos).
+  - **Histórico Completo de Pedidos:** Listagem detalhada com status, método de pagamento, data, parcelas e código do pedido.
+  - **Área de Membros em 1 Clique:** Botão direto *"Acessar Conteúdo / Área de Membros"* para produtos com URL configurada (`member_area_url`).
+  - **2ª Via e Regeneração de Pix:** Modal instantâneo com QR Code dinâmico, código Copia e Cola e contagem regressiva de validade; se o Pix estiver expirado, permite regenerar nova cobrança com 1 clique.
+  - **Gestão de Assinaturas e Atualização de Cartão:** Visualização de ciclo, status, próxima cobrança e faturas vinculadas, com modal seguro para atualizar o cartão de crédito da assinatura.
+  - **Campo de Área de Membros no Cadastro de Produtos:** Campo `member_area_url` adicionado ao modal de produtos e sincronizado no banco.
+  - **Testes Unitários:** 100% aprovados (Backend Pytest: 110 testes incluindo `test_buyer_portal.py` | Frontend Vitest: 357 testes incluindo `BuyerPortal.test.jsx`).
 
-#### #16. Co-Produção com Prazo de Contrato (`valid_until`)
+#### ✅ #16. Co-Produção com Prazo de Contrato (`valid_until`) [CONCLUÍDO]
 - **Objetivo:** Automatizar contratos temporários de co-produção/lançamento no split.
-- **Entregáveis:**
-  - **Expiração Automática de Split (`valid_until`):** Data limite opcional para a cota de um co-produtor no split do produto, retornando a porcentagem ao produtor principal após o fim do período.
-  - Testes unitários Backend e Frontend.
+- **Entregáveis Concluídos:**
+  - **Expiração Automática de Split (`valid_until`):** Data limite opcional para a cota de um co-produtor no split do produto, retornando a porcentagem ao produtor principal automaticamente após o fim do período.
+  - **Interface no Painel:** Campo de data de expiração e indicador visual de contrato expirado no modal de splits do produto.
+  - **Testes Unitários:** 100% aprovados (`test_coproduction_split.py`).
 
-#### #17. Multi-Pixels de Conversão (Google Ads, TikTok Ads & Kwai Ads)
-- **Objetivo:** Escalar tráfego pago em múltiplas redes de anúncios além da Meta.
-- **Entregáveis:**
-  - Configuração por produto de **Google Ads ID + Conversion Label** (`AW-XXXXX/YYYYY`), **TikTok Pixel ID** e **Kwai Pixel ID** disparando `PageView`, `InitiateCheckout` e `Purchase`.
-  - Testes unitários Frontend.
 
-#### #18. Teste A/B Nativo de Checkout e Ofertas (Split Testing 50/50)
+#### ✅ #17. Multi-Pixels de Conversão (Google Ads e TikTok Ads) [CONCLUÍDO]
+- **Objetivo:** Escalar tráfego pago em múltiplas redes de anúncios além da Meta (Google Ads e TikTok Ads).
+- **Entregáveis Concluídos:**
+  - **Schema & Banco de Dados:** Adição de `google_ads_id`, `google_ads_conversion_label` e `tiktok_pixel_id` na tabela `products` via script de migração versionado e registrado em `DATABASE_SCHEMA_LOG.md`.
+  - **Rastreamento Multi-Pixel Unificado:** Suporte resiliente a AdBlock com inicialização assíncrona (`gtag.js` e `ttq.js`) e disparo automático dos eventos `PageView`, `InitiateCheckout` (com `price`, `quantity`, itens e valor) e `Purchase` (com `send_to: id/label`, transaction_id e `CompletePayment`).
+  - **Interface no Painel:** Campos modernos em componente modular `<ProductPixelFields />` no cadastro/edição de produtos e no modal dedicado de Multi-Pixels.
+  - **Testes Unitários:** 100% aprovados (Backend Pytest: `test_multi_pixels.py` | Frontend Vitest: `pixelService.test.jsx`, `ProductPixelModal.test.jsx`, `ProductPixelFields.test.jsx`).
+
+#### ✅ #18. Teste A/B Nativo de Checkout e Ofertas (Split Testing 50/50) [CONCLUÍDO]
 - **Objetivo:** Descobrir cientificamente qual preço, layout ou configuração gera mais lucro por visitante.
-- **Entregáveis:**
-  - Distribuição automática 50/50 de tráfego entre duas variantes de oferta/checkout e relatório comparativo de conversão (`Visitas ➔ InitiateCheckout ➔ Vendas Pagas`).
-  - Testes unitários Backend e Frontend.
+- **Entregáveis Concluídos:**
+  - **Schema & Banco de Dados:** Tabela `ab_tests` criada e colunas `ab_test_id` e `ab_test_variant` adicionadas em `orders` e `abandoned_checkouts`, registradas em `DATABASE_SCHEMA_LOG.md`.
+  - **Distribuição de Tráfego 50/50:** Roteamento probabilístico persistido no `localStorage` do visitante (`checkout_ab_{id}`) para garantir consistência em visitas recorrentes.
+  - **Funil de Conversão & Métricas em Tempo Real:** Rastreamento ponta a ponta (`Visitas` ➔ `InitiateCheckout` ➔ `Pedidos Pagos` e `Faturamento R$`) com cálculo automático de taxa de conversão e badge de variante vencedora (*"🏆 Vencedora"*).
+  - **Interface no Painel:** Modal moderno `<ProductABTestModal />` acessível via menu suspenso de ações em `<ProductActionsDropdown />`, com criação rápida de testes, toggle ativo/pausado e confirmação de exclusão.
+  - **Recuperação de Carrinho Abandonado:** Associação automática de variantes aos leads capturados no Step 1 do checkout.
+  - **Testes Unitários:** 100% aprovados (Backend Pytest: `test_ab_testing.py` | Frontend Vitest: `ProductABTestModal.test.jsx`, `useCheckoutABTest.test.js`).
 
 #### #19. Carteiras Digitais 1-Toque no Mobile (Apple Pay & Google Pay)
 - **Objetivo:** Facilitar compras por impulso no celular usando FaceID/biometria sem precisar digitar os números do cartão físico.
@@ -197,11 +225,15 @@ Este documento consolida todos os módulos necessários para transformar o **Che
   - Botão **"Reembolsar Venda"** com modal de confirmação seguro, estorno proporcional no split (Pagar.me/Asaas) e disparo do webhook `order.refunded`.
   - Testes unitários Backend e Frontend.
 
-#### #21. Dados de Antifraude & Endereço de Cobrança para Cartão/Boleto (ViaCEP)
+#### ✅ #21. Dados de Antifraude & Endereço de Cobrança para Cartão/Boleto (ViaCEP) [CONCLUÍDO]
 - **Objetivo:** Aumentar aprovação de cartão em tickets altos e atender exigências de emissão de boletos registrados.
-- **Entregáveis:**
-  - Toggle por produto para solicitar CEP (com autocompletar automático via **ViaCEP**), Número e Complemento quando o cliente pagar via Cartão ou Boleto.
-  - Testes unitários Backend e Frontend.
+- **Entregáveis Concluídos:**
+  - **Configuração no Painel:** Toggle por produto (`require_billing_address`) integrado ao modal de produto através de `<ProductRequirementFields />`.
+  - **Autocompletar Instantâneo (ViaCEP):** Busca assíncrona ao digitar 8 dígitos do CEP com máscara automática e preenchimento de rua, bairro, cidade e UF.
+  - **Fallback no Backend:** Endpoint público `/api/v1/checkout/cep/{cep}` garantindo resiliência em caso de falhas de rede/CORS na API direta.
+  - **Validação Transacional Rigorosa:** O backend valida a completude do endereço para pagamentos com Cartão de Crédito e Híbridos, preservando o fluxo ultrarrápido sem endereço para Pix e Cripto.
+  - **Persistência de Dados:** Colunas dedicadas criadas e migradas em `orders` e `abandoned_checkouts`, registradas no `DATABASE_SCHEMA_LOG.md`.
+  - **Testes Unitários:** 100% aprovados (Backend Pytest: 5 testes em `test_billing_address.py` | Frontend Vitest: 18 testes em `viaCepService.test.js`, `useBillingAddress.test.js`, `CheckoutBillingAddress.test.jsx`, `ProductRequirementFields.test.jsx` e `CheckoutBillingAddressIntegration.test.jsx`).
 
 #### #22. Editor Visual de Checkout com Preview Ao Vivo (Checkout Builder)
 - **Objetivo:** Visualizar todas as personalizações (cores, logo, áudio, vídeo, bumps, timer) em tempo real lado a lado.
@@ -232,28 +264,28 @@ Este documento consolida todos os módulos necessários para transformar o **Che
 | **Sistema de Afiliados (Links ?ref, Métricas, Comissões e Split)** | Parcerias | ✅ Concluído (100%) |
 | **Assinaturas & Cobrança Recorrente (MRR, Ciclos, Faturas e Ações)** | Recorrência | ✅ Concluído (100%) |
 | **#1. Meta Conversions API (CAPI Server-Side)** | Atribuição Blindada | ⏳ **Próximo da Fila** |
-| **#2. Link de Checkout Pré-Preenchido + Auto-Cupom via URL** | Conversão X1/Whats | ⏳ A Fazer |
-| **#3. Desconto Automático por Método (Incentivo Pix/Cripto)** | Margem & Caixa | ⏳ A Fazer |
-| **#4. Regras de Parcelamento no Cartão + Simulador de Split** | Precificação 12x | ⏳ A Fazer |
-| **#5. Fallback Inteligente de Cartão Recusado (Modal Pix)** | Recuperação Instantânea | ⏳ A Fazer |
-| **#6. Boleto Parcelado & Pix Parcelado via Asaas (Entrada + Carnê)** | High-Ticket (+35%) | ⏳ A Fazer |
+| **#2. Link de Checkout Pré-Preenchido + Auto-Cupom via URL** | Conversão X1/Whats | ✅ Concluído (100%) |
+| **#3. Desconto Automático por Método (Incentivo Pix/Cripto)** | Margem & Caixa | ✅ Concluído (100%) |
+| **#4. Regras de Parcelamento no Cartão + Simulador de Split** | Precificação 12x | ✅ Concluído (100%) |
+| **#5. Fallback Inteligente de Cartão Recusado (Modal Pix)** | Recuperação Instantânea | ✅ Concluído (100%) |
+| **#6. Boleto Parcelado & Pix Parcelado via Asaas (Entrada + Carnê)** | High-Ticket (+35%) | ✅ Concluído (100%) |
 | **#7. Contingência Automática Multi-Gateway (Smart Failover)** | Blindagem de Quedas | ⏳ A Fazer |
 | **#8. Pagamento Híbrido: Pix + Cartão e 2 Cartões (Fatia Limite)** | Conversão sem Limite | ✅ Concluído (100%) |
 | **#9. Gerador de Link de Negociação Personalizada (Closers)** | Fechamento Comercial | ✅ Concluído (100%) |
-| **#10. Escudo Anti-Carding, Velocity Check & Blacklist Própria** | Segurança da Conta | ⏳ A Fazer |
-| **#11. Upsell & Downsell Real em 1 Clique (Tokenização Cartão)** | 1-Click Buy Pós-Venda | ⏳ A Fazer |
-| **#12. Exit-Intent Popup (Cupom Relâmpago) & Prova Social Ao Vivo** | Retenção de Saída | ⏳ A Fazer |
-| **#13. Vídeo de Vendas (Mini-VSL) & Áudio WhatsApp no Checkout** | Humanização & Prova | ⏳ A Fazer |
+| **#10. Escudo Anti-Carding, Velocity Check & Blacklist Própria** | Segurança da Conta | ✅ Concluído (100%) |
+| **#11. Upsell & Downsell Real em 1 Clique (Tokenização Cartão)** | 1-Click Buy Pós-Venda | ✅ Concluído (100%) |
+| **#12. Exit-Intent Popup (Cupom Relâmpago) & Prova Social Ao Vivo** | Retenção de Saída | ✅ Concluído (100%) |
+| **#13. Vídeo de Vendas (Mini-VSL) & Áudio WhatsApp no Checkout** | Humanização & Prova | ✅ Concluído (100%) |
 | **#14. Notificação "Cha-Ching" em Tempo Real para os Sócios** | Alertas com Split | ⏳ A Fazer |
-| **#15. Central Rápida do Comprador (`/minhas-compras` — 2ª Via)** | Redução de Suporte | ⏳ A Fazer |
+| **#15. Central Rápida do Comprador (`/minhas-compras` — 2ª Via)** | Redução de Suporte | ✅ Concluído (100%) |
 | **#16. Co-Produção com Prazo de Contrato (`valid_until`)** | Contratos Temporários | ✅ Concluído (100%) |
-| **#17. Multi-Pixels (Google Ads, TikTok Ads & Kwai Ads)** | Escala Multi-Rede | ⏳ A Fazer |
-| **#18. Teste A/B Nativo de Checkout e Ofertas (Split 50/50)** | Otimização de ROI | ⏳ A Fazer |
+| **#17. Multi-Pixels (Google Ads e TikTok Ads)** | Escala Multi-Rede | ✅ Concluído (100%) |
+| **#18. Teste A/B Nativo de Checkout e Ofertas (Split 50/50)** | Otimização de ROI | ✅ Concluído (100%) |
 | **#19. Carteiras Digitais 1-Toque Mobile (Apple Pay & Google Pay)** | Mobile 1-Toque | ⏳ A Fazer |
-| **#20. Reembolso 1-Click no Painel** | Pós-Venda Seguro | ⏳ A Fazer |
-| **#21. Antifraude & Endereço de Cobrança Cartão/Boleto (ViaCEP)** | Aprovação & Boletos | ⏳ A Fazer |
-| **#22. Editor Visual de Checkout com Preview Ao Vivo** | Builder Visual | ⏳ A Fazer |
-| **#23. Domínios Personalizados (CNAME Whitelabel)** | Autoridade de Marca | ⏳ A Fazer |
+| **#20. Reembolso 1-Click no Painel (com Motivo de Auditoria)** | Pós-Venda Seguro | ✅ Concluído (100%) |
+| **#21. Antifraude & Endereço de Cobrança Cartão/Boleto (ViaCEP)** | Aprovação & Boletos | ✅ Concluído (100%) |
+| **#22. Editor Visual de Checkout com Preview Ao Vivo** | Builder Visual | ✅ Concluído (100%) |
+| **#23. Domínios Personalizados (CNAME Whitelabel)** | Autoridade de Marca | ✅ Concluído (100%) |
 
 ---
 

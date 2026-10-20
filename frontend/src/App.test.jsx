@@ -37,7 +37,8 @@ describe('App Component', () => {
       </ToastProvider>
     );
     expect(screen.getByRole('complementary', { name: /menu lateral/i })).toBeInTheDocument();
-    expect(screen.getByText('Gestão de Usuários')).toBeInTheDocument();
+    expect(screen.getByTestId('tab-system-users')).toBeInTheDocument();
+    expect(screen.getByTestId('open-invite-modal-btn')).toBeInTheDocument();
   });
 
   it('restores last active tab from localStorage upon page reload', () => {
@@ -60,7 +61,7 @@ describe('App Component', () => {
     );
 
     expect(screen.getByTestId('automated-backup-page')).toBeInTheDocument();
-    expect(screen.queryByText('Gestão de Usuários')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('open-invite-modal-btn')).not.toBeInTheDocument();
   });
 
   it('renders welcome screen for non-superadmin users without mentioning restricted areas', () => {

@@ -74,7 +74,7 @@ describe('GatewayManagement Component', () => {
     await waitFor(() => {
       expect(screen.getByText('Pagar.me (Stone Co.)')).toBeInTheDocument();
       expect(screen.getByText('NOWPayments (Cripto)')).toBeInTheDocument();
-      expect(screen.queryByText('Asaas')).not.toBeInTheDocument();
+      expect(screen.getByTestId('card-asaas')).toBeInTheDocument();
     });
   });
 

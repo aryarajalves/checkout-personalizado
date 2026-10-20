@@ -185,7 +185,9 @@ def list_orders_report(
                 src=o.src,
                 sck=o.sck,
                 created_at=o.created_at,
-                paid_at=o.paid_at
+                paid_at=o.paid_at,
+                refund_reason=o.refund_reason,
+                refunded_at=o.refunded_at
             )
         )
 
@@ -201,6 +203,68 @@ def get_order_by_id(db: Session, order_id: int) -> Order:
             detail=f"Pedido #{order_id} não encontrado."
         )
     return order
+
+
+def refund_order(
+    db: Session,
+    order_id: int,
+    reason: str,
+    notes: Optional[str] = None
+) -> Order:
+    """
+    Executa o estorno/reembolso de um pedido com status 'paid',
+    registra o motivo do reembolso, atualiza data/hora e dispara webhook oficial 'order.refunded'.
+    """
+    order = get_order_by_id(db, order_id)
+    if order.status == "refunded":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Este pedido já foi reembolsado anteriormente."
+        )
+    if order.status != "paid":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Apenas pedidos com status 'Pago' podem ser reembolsados. Status atual: {order.status}."
+        )
+
+    clean_reason = reason.strip() if reason else "Solicitação de reembolso"
+    if notes and notes.strip():
+        clean_reason = f"{clean_reason} - {notes.strip()}"
+
+    # Se gateway for Pagar.me
+    if order.gateway_name == "pagarme" and order.external_transaction_id:
+        try:
+            from app.services import pagarme_service
+            from app.models.gateway import GatewaySetting
+            gateway_setting = db.query(GatewaySetting).filter(GatewaySetting.gateway_name == "pagarme").first()
+            pagarme_service.refund_charge(
+                charge_id=order.external_transaction_id,
+                amount_cents=int(round(order.amount_brl * 100)),
+                gateway_setting=gateway_setting
+            )
+        except Exception as exc:
+            logger.error(f"Falha ao acionar gateway Pagar.me no estorno de {order.order_code}: {exc}")
+
+    now = datetime.now(timezone.utc)
+    order.status = "refunded"
+    order.refund_reason = clean_reason
+    order.refunded_at = now
+    order.updated_at = now
+
+    db.commit()
+    db.refresh(order)
+
+    # Dispara Webhooks de Reembolso cadastrados no produto
+    try:
+        from app.services import webhook_dispatcher_service
+        webhook_dispatcher_service.dispatch_order_webhooks(order, "order.refunded", db)
+        db.commit()
+    except Exception as exc:
+        logger.error(f"Erro ao disparar webhooks de reembolso para pedido {order.order_code}: {exc}")
+
+    logger.info(f"Pedido {order.order_code} reembolsado com sucesso. Motivo: {clean_reason}")
+    return order
+
 
 
 def _aggregate_utm_column(db: Session, column_attr, start_date=None, end_date=None, product_id=None) -> List[UtmAnalyticsItemResponse]:
@@ -326,3 +390,90 @@ def export_orders_csv(
         ])
 
     return output.getvalue()
+
+
+def delete_order(db: Session, order_id: int) -> bool:
+    """Exclui permanentemente um pedido e limpa em cascata registros vinculados."""
+    order = db.query(Order).filter(Order.id == order_id).first()
+    if not order:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Pedido com ID {order_id} não encontrado."
+        )
+
+    order_code = order.order_code
+
+    # Desvincula referências para evitar restrições de chave estrangeira
+    db.query(Order).filter(Order.parent_order_id == order_id).update({Order.parent_order_id: None})
+
+    try:
+        from app.models.custom_proposal import CustomProposal
+        db.query(CustomProposal).filter(CustomProposal.order_id == order_id).update({CustomProposal.order_id: None})
+    except Exception:
+        pass
+
+    try:
+        from app.models.subscription import Subscription
+        db.query(Subscription).filter(Subscription.initial_order_id == order_id).update({Subscription.initial_order_id: None})
+    except Exception:
+        pass
+
+    try:
+        from app.models.webhook import WebhookDispatchLog
+        db.query(WebhookDispatchLog).filter(WebhookDispatchLog.order_id == order_id).update({WebhookDispatchLog.order_id: None})
+    except Exception:
+        pass
+
+    db.delete(order)
+    db.commit()
+    logger.info(f"Pedido #{order_code} (ID: {order_id}) excluído com sucesso do banco de dados.")
+    return True
+
+
+def bulk_delete_orders(db: Session, order_ids: List[int]) -> int:
+    """Exclui múltiplos pedidos em lote permanentemente."""
+    if not order_ids:
+        return 0
+
+    orders = db.query(Order).filter(Order.id.in_(order_ids)).all()
+    if not orders:
+        return 0
+
+    found_ids = [o.id for o in orders]
+
+    db.query(Order).filter(Order.parent_order_id.in_(found_ids)).update(
+        {Order.parent_order_id: None}, synchronize_session=False
+    )
+
+    try:
+        from app.models.custom_proposal import CustomProposal
+        db.query(CustomProposal).filter(CustomProposal.order_id.in_(found_ids)).update(
+            {CustomProposal.order_id: None}, synchronize_session=False
+        )
+    except Exception:
+        pass
+
+    try:
+        from app.models.subscription import Subscription
+        db.query(Subscription).filter(Subscription.initial_order_id.in_(found_ids)).update(
+            {Subscription.initial_order_id: None}, synchronize_session=False
+        )
+    except Exception:
+        pass
+
+    try:
+        from app.models.webhook import WebhookDispatchLog
+        db.query(WebhookDispatchLog).filter(WebhookDispatchLog.order_id.in_(found_ids)).update(
+            {WebhookDispatchLog.order_id: None}, synchronize_session=False
+        )
+    except Exception:
+        pass
+
+    deleted_count = 0
+    for order in orders:
+        db.delete(order)
+        deleted_count += 1
+
+    db.commit()
+    logger.info(f"{deleted_count} pedidos excluídos em lote com sucesso.")
+    return deleted_count

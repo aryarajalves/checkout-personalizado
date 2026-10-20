@@ -35,6 +35,13 @@ class OrderReportItemResponse(BaseModel):
     sck: Optional[str] = None
     created_at: datetime
     paid_at: Optional[datetime] = None
+    refund_reason: Optional[str] = None
+    refunded_at: Optional[datetime] = None
+
+
+class RefundOrderRequest(BaseModel):
+    reason: str
+    notes: Optional[str] = None
 
 
 class PaymentMethodMetric(BaseModel):
@@ -72,3 +79,13 @@ class UtmAnalyticsResponse(BaseModel):
     by_campaign: List[UtmAnalyticsItemResponse] = []
     by_medium: List[UtmAnalyticsItemResponse] = []
     by_src: List[UtmAnalyticsItemResponse] = []
+
+
+class BulkDeleteOrdersRequest(BaseModel):
+    order_ids: List[int]
+
+
+class BulkDeleteOrdersResponse(BaseModel):
+    success: bool
+    deleted_count: int
+    message: str

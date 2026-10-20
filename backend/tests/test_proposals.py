@@ -214,7 +214,7 @@ def test_checkout_with_custom_proposal(test_product: Product, db):
         "card_holder": "RENATA LIMA",
         "card_expiry": "12/28",
         "card_cvv": "123",
-        "installments": 6,
+        "installments": 1,
         "proposal_code": "PROP-BUY-3000"
     }
 
@@ -262,3 +262,92 @@ def test_expired_proposal_blocked(test_product: Product, db):
     res = client.post("/api/v1/checkout/process", json=payload)
     assert res.status_code == 400
     assert "expirou" in res.json()["detail"].lower()
+
+
+def test_filter_proposals_by_payment_method(test_product: Product, db):
+    headers = get_auth_headers()
+    p1 = CustomProposal(
+        proposal_code="PROP-FILTER-PIX",
+        product_id=test_product.id,
+        title="Proposta Pix",
+        customer_name="Cliente Pix",
+        customer_email="pix@test.com",
+        customer_phone="11911111111",
+        amount_brl=1500.0,
+        payment_method_allowed="pix",
+        status="active",
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=24)
+    )
+    p2 = CustomProposal(
+        proposal_code="PROP-FILTER-HYBRID",
+        product_id=test_product.id,
+        title="Proposta Híbrida",
+        customer_name="Cliente Híbrido",
+        customer_email="hybrid@test.com",
+        customer_phone="11922222222",
+        amount_brl=2000.0,
+        payment_method_allowed="hybrid_pix_card",
+        custom_pix_amount_brl=500.0,
+        custom_card_amount_brl=1500.0,
+        status="active",
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=24)
+    )
+    db.add_all([p1, p2])
+    db.commit()
+
+    # Filtro por pix
+    res_pix = client.get("/api/v1/proposals?payment_method=pix", headers=headers)
+    assert res_pix.status_code == 200
+    items_pix = res_pix.json()["items"]
+    assert any(p["proposal_code"] == "PROP-FILTER-PIX" for p in items_pix)
+    assert not any(p["proposal_code"] == "PROP-FILTER-HYBRID" for p in items_pix)
+
+    # Filtro por hybrid_pix_card
+    res_hybrid = client.get("/api/v1/proposals?payment_method=hybrid_pix_card", headers=headers)
+    assert res_hybrid.status_code == 200
+    items_hybrid = res_hybrid.json()["items"]
+    assert any(p["proposal_code"] == "PROP-FILTER-HYBRID" for p in items_hybrid)
+    assert not any(p["proposal_code"] == "PROP-FILTER-PIX" for p in items_hybrid)
+
+
+def test_update_custom_proposal(test_product: Product, db):
+    headers = get_auth_headers()
+    prop = CustomProposal(
+        proposal_code="PROP-UPDATE-001",
+        product_id=test_product.id,
+        title="Título Antigo",
+        customer_name="Cliente Antigo",
+        customer_email="antigo@test.com",
+        customer_phone="11999990000",
+        amount_brl=1000.0,
+        payment_method_allowed="all",
+        status="active",
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=24)
+    )
+    db.add(prop)
+    db.commit()
+
+    update_payload = {
+        "title": "Título Atualizado com Sucesso",
+        "customer_name": "Cliente Novo VIP",
+        "amount_brl": 1200.0,
+        "payment_method_allowed": "credit_card",
+        "max_installments": 6,
+        "closer_name": "Closer Mariana"
+    }
+
+    res = client.put(f"/api/v1/proposals/{prop.id}", json=update_payload, headers=headers)
+    assert res.status_code == 200
+    data = res.json()
+    assert data["title"] == "Título Atualizado com Sucesso"
+    assert data["customer_name"] == "Cliente Novo VIP"
+    assert data["amount_brl"] == 1200.0
+    assert data["payment_method_allowed"] == "credit_card"
+    assert data["max_installments"] == 6
+    assert data["closer_name"] == "Closer Mariana"
+
+    # Confirma persistência no banco
+    db.refresh(prop)
+    assert prop.title == "Título Atualizado com Sucesso"
+    assert prop.amount_brl == 1200.0
+

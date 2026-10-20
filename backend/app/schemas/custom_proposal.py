@@ -27,8 +27,14 @@ class CustomProposalCreate(CustomProposalBase):
 
 
 class CustomProposalUpdate(BaseModel):
+    product_id: Optional[int] = None
+    offer_id: Optional[int] = None
     title: Optional[str] = None
     description: Optional[str] = None
+    customer_name: Optional[str] = None
+    customer_email: Optional[str] = None
+    customer_phone: Optional[str] = None
+    customer_cpf: Optional[str] = None
     amount_brl: Optional[float] = None
     payment_method_allowed: Optional[str] = None
     custom_pix_amount_brl: Optional[float] = None
@@ -36,6 +42,7 @@ class CustomProposalUpdate(BaseModel):
     max_installments: Optional[int] = None
     closer_name: Optional[str] = None
     notes: Optional[str] = None
+    expires_hours: Optional[int] = None
     expires_at: Optional[datetime] = None
     status: Optional[str] = None
 

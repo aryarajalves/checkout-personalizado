@@ -196,6 +196,35 @@
   border-color: #0284c7;
   box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
 }
+.checkout-payment-tab:disabled,
+.checkout-payment-tab.disabled-proposal {
+  opacity: 0.45 !important;
+  cursor: not-allowed !important;
+  filter: grayscale(1) !important;
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: none !important;
+}
+.checkout-payment-tab:disabled:hover,
+.checkout-payment-tab.disabled-proposal:hover {
+  border-color: #e2e8f0 !important;
+  background-color: #f1f5f9 !important;
+}
+.checkout-payment-tab:disabled .checkout-tab-icon-box,
+.checkout-payment-tab.disabled-proposal .checkout-tab-icon-box {
+  background-color: #e2e8f0 !important;
+  color: #94a3b8 !important;
+}
+.checkout-payment-tab:disabled .checkout-tab-title,
+.checkout-payment-tab.disabled-proposal .checkout-tab-title,
+.checkout-payment-tab:disabled .checkout-tab-sub,
+.checkout-payment-tab.disabled-proposal .checkout-tab-sub {
+  color: #94a3b8 !important;
+}
+.checkout-payment-tab:disabled .payment-discount-badge,
+.checkout-payment-tab.disabled-proposal .payment-discount-badge {
+  display: none !important;
+}
 .checkout-tab-icon-box {
   width: 32px;
   height: 32px;

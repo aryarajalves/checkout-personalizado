@@ -137,6 +137,19 @@ describe('AffiliateManagement Component', () => {
   });
 
   it('opens new affiliate modal and submits payload', async () => {
+    vi.spyOn(global, 'fetch').mockImplementation((url) => {
+      if (typeof url === 'string' && url.includes('/api/v1/auth/users')) {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              { id: 99, name: 'Novo Parceiro', email: 'novo@parceiro.com', phone: '11977776666', pix_key: 'novo@pix.com' },
+            ]),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+    });
+
     const createMock = vi.spyOn(affiliateApi, 'createAffiliateApi').mockResolvedValue({
       id: 3,
       name: 'Novo Parceiro',
@@ -159,16 +172,16 @@ describe('AffiliateManagement Component', () => {
 
     expect(screen.getByTestId('affiliate-form-modal')).toBeInTheDocument();
 
-    fireEvent.change(screen.getByPlaceholderText('Ex: Carlos Silva'), {
-      target: { value: 'Novo Parceiro' },
+    await waitFor(() => {
+      expect(screen.getByTestId('select-affiliate-user')).toBeInTheDocument();
+      expect(screen.getByRole('option', { name: /Novo Parceiro/i })).toBeInTheDocument();
     });
-    fireEvent.change(screen.getByPlaceholderText('carlos@exemplo.com'), {
-      target: { value: 'novo@parceiro.com' },
+
+    fireEvent.change(screen.getByTestId('select-affiliate-user'), {
+      target: { value: '99' },
     });
-    fireEvent.change(screen.getByPlaceholderText('(11) 98888-7777'), {
-      target: { value: '11977776666' },
-    });
-    fireEvent.change(screen.getByPlaceholderText('Ex: CARLOS10 (deixe vazio p/ auto)'), {
+
+    fireEvent.change(screen.getByTestId('input-affiliate-code'), {
       target: { value: 'NOVO10' },
     });
 
@@ -178,6 +191,7 @@ describe('AffiliateManagement Component', () => {
     await waitFor(() => {
       expect(createMock).toHaveBeenCalledWith(
         expect.objectContaining({
+          user_id: 99,
           name: 'Novo Parceiro',
           email: 'novo@parceiro.com',
           phone: '11977776666',

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Package, Edit2, Trash2, Share2, Copy, Check, CreditCard, Coins, Tag } from 'lucide-react';
+import { Package, Edit2, Trash2, Share2, Copy, Check, CreditCard, Coins, Tag, Globe } from 'lucide-react';
 import ProductActionsDropdown from './ProductActionsDropdown';
 
 export default function ProductsTable({
@@ -15,6 +15,9 @@ export default function ProductsTable({
   onManageOrderBumps,
   onManageUpsell,
   onManageAppearance,
+  onManageConversion,
+  onManageDomain,
+  onManageABTest,
   onDelete,
   onNewProduct,
 }) {
@@ -116,6 +119,27 @@ export default function ProductsTable({
                         <span>{copiedSlug === prod.slug ? 'Copiado!' : 'Copiar'}</span>
                       </button>
                     </div>
+                    {prod.custom_domain && (
+                      <div
+                        style={{
+                          marginTop: '4px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          fontSize: '11px',
+                          color: '#0284c7',
+                          backgroundColor: '#f0f9ff',
+                          padding: '1px 6px',
+                          borderRadius: '4px',
+                          border: '1px solid #bae6fd',
+                          width: 'fit-content',
+                        }}
+                        data-testid={`custom-domain-badge-${prod.id}`}
+                      >
+                        <Globe size={11} />
+                        <span style={{ fontWeight: 600 }}>{prod.custom_domain}</span>
+                      </div>
+                    )}
                   </td>
 
                   <td>
@@ -192,15 +216,18 @@ export default function ProductsTable({
                         <span>Editar</span>
                       </button>
 
-                      {/* Dropdown com Funil (Pixel, Order Bump, UpSell), Webhooks e Split */}
+                      {/* Dropdown com Funil (Pixel, Order Bump, UpSell), Domínio, Webhooks e Split */}
                       <ProductActionsDropdown
                         product={prod}
                         onManagePixel={onManagePixel}
                         onManageOrderBumps={onManageOrderBumps}
                         onManageUpsell={onManageUpsell}
                         onManageAppearance={onManageAppearance}
+                        onManageConversion={onManageConversion}
+                        onManageDomain={onManageDomain}
                         onManageWebhooks={onManageWebhooks}
                         onConfigureSplit={onConfigureSplit}
+                        onManageABTest={onManageABTest}
                       />
 
                       <button

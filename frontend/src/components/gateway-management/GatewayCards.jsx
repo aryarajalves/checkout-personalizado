@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CreditCard, Eye, EyeOff, CheckCircle2, AlertTriangle, RefreshCw, Send, Coins } from 'lucide-react';
+import { CreditCard, Eye, EyeOff, CheckCircle2, AlertTriangle, RefreshCw, Send, Coins, FileText } from 'lucide-react';
 
 export default function GatewayCards({
   gateways,
@@ -321,6 +321,116 @@ export default function GatewayCards({
             data-testid="save-nowpayments-btn"
           >
             {savingGateway === 'nowpayments' ? 'Salvando...' : 'Salvar Alterações'}
+          </button>
+        </div>
+      </div>
+
+      {/* ---------------- CARD 3: ASAAS (BOLETO / CARNÊ / PIX) ---------------- */}
+      <div className="gateway-card glass-panel" data-testid="card-asaas">
+        <div className="gateway-card-header">
+          <div className="gateway-title-box">
+            <div className="gateway-icon-badge asaas-badge">
+              <FileText size={20} />
+            </div>
+            <div>
+              <h3 className="gateway-name">Asaas (Carnê & BolePix)</h3>
+              <span className="gateway-desc">Boleto Parcelado e Pix Parcelado com split</span>
+            </div>
+          </div>
+
+          <div className="gateway-switch-box">
+            <label className="switch-label">
+              <input
+                type="checkbox"
+                checked={getBoolean('asaas', 'is_active', false)}
+                onChange={(e) => handleChange('asaas', 'is_active', e.target.checked)}
+                data-testid="toggle-asaas"
+              />
+              <span className="switch-slider"></span>
+            </label>
+            <span className={`status-indicator ${getBoolean('asaas', 'is_active') ? 'active' : 'inactive'}`}>
+              {getBoolean('asaas', 'is_active') ? 'Ativo' : 'Inativo'}
+            </span>
+          </div>
+        </div>
+
+        <div className="gateway-env-selector">
+          <span className="env-label">Ambiente:</span>
+          <div className="env-pill-group">
+            <button
+              type="button"
+              className={`env-btn ${getEnv('asaas') === 'sandbox' ? 'active' : ''}`}
+              onClick={() => handleChange('asaas', 'environment', 'sandbox')}
+              data-testid="env-asaas-sandbox"
+            >
+              Sandbox (Testes)
+            </button>
+            <button
+              type="button"
+              className={`env-btn ${getEnv('asaas') === 'production' ? 'active' : ''}`}
+              onClick={() => handleChange('asaas', 'environment', 'production')}
+              data-testid="env-asaas-production"
+            >
+              Produção
+            </button>
+          </div>
+        </div>
+
+        <div className="gateway-fields">
+          <div className="form-group">
+            <label>Chave de API ($aact_...) *</label>
+            <div className="password-input-wrapper">
+              <input
+                type={showKeys['asaas_secret'] ? 'text' : 'password'}
+                className="form-input"
+                placeholder="Insira sua Chave de API do Asaas"
+                value={getValue('asaas', 'api_key')}
+                onChange={(e) => handleChange('asaas', 'api_key', e.target.value)}
+                data-testid="input-asaas-secret"
+              />
+              <button
+                type="button"
+                className="toggle-visibility-btn"
+                onClick={() => toggleShowKey('asaas_secret')}
+                title="Mostrar/Ocultar"
+              >
+                {showKeys['asaas_secret'] ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Token de Autenticação do Webhook</label>
+            <input
+              type="password"
+              className="form-input"
+              placeholder="Token de verificação do Webhook Asaas"
+              value={getValue('asaas', 'webhook_secret')}
+              onChange={(e) => handleChange('asaas', 'webhook_secret', e.target.value)}
+              data-testid="input-asaas-webhook"
+            />
+          </div>
+        </div>
+
+        <div className="gateway-card-actions">
+          <button
+            type="button"
+            className="secondary-action-btn"
+            onClick={() => handleTest('asaas')}
+            disabled={testingGateway === 'asaas'}
+            data-testid="test-asaas-btn"
+          >
+            {testingGateway === 'asaas' ? <RefreshCw size={15} className="spinning-icon" /> : <Send size={15} />}
+            <span>Testar Conexão</span>
+          </button>
+          <button
+            type="button"
+            className="primary-action-btn"
+            onClick={() => handleSave('asaas')}
+            disabled={savingGateway === 'asaas'}
+            data-testid="save-asaas-btn"
+          >
+            {savingGateway === 'asaas' ? 'Salvando...' : 'Salvar Alterações'}
           </button>
         </div>
       </div>

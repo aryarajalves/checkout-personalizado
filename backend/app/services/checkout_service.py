@@ -45,16 +45,54 @@ def validate_cpf_digits(cpf_str: str) -> bool:
     d2 = 0 if resto == 10 else resto
     return int(digits[10]) == d2
 
-def process_checkout(db: Session, request: CheckoutProcessRequest) -> CheckoutProcessResponse:
+def process_checkout(db: Session, request: CheckoutProcessRequest, client_ip: Optional[str] = None) -> CheckoutProcessResponse:
     """
     Processa a submissão de um pedido no checkout público.
+    - Checagem preventiva no Escudo Anti-Carding (Blacklist e Velocity Check #10)
     - Localiza o produto e/ou oferta pelo slug informado
     - Valida CPF se o produto exigir
-    - Cria o pedido com status 'pending'
+    - Cria o pedido com status 'pending' ou 'paid'
     - Calcula e registra os splits de pagamento
-    - Gera cobrança Pix com Pagar.me V5
+    - Gera cobrança Pix com Pagar.me V5 ou processa Cartão/Cripto
     """
     slug = request.slug.strip().lower()
+
+    # 0. Verificações Preventivas de Segurança (Blacklist & Velocity Check)
+    from app.services import security_service
+    is_blocked, bl_reason = security_service.check_is_blacklisted(
+        db,
+        cpf=request.cpf,
+        email=request.email,
+        phone=request.phone,
+        ip_address=client_ip
+    )
+    if is_blocked:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Transação não autorizada. Entre em contato com o suporte ou utilize outro método de pagamento."
+        )
+
+    is_card_payment = request.payment_method in ["credit_card", "hybrid_pix_card", "hybrid_two_cards"]
+    if is_card_payment:
+        is_vel_blocked, fail_count, vel_msg = security_service.check_velocity_limit(
+            db,
+            ip_address=client_ip,
+            cpf=request.cpf,
+            email=request.email
+        )
+        if is_vel_blocked:
+            security_service.log_card_attempt(
+                db,
+                ip_address=client_ip,
+                cpf=request.cpf,
+                email=request.email,
+                status="blocked",
+                reason="velocity_limit_exceeded"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=vel_msg
+            )
 
     # 1. Localiza a oferta ou o produto pelo slug
     offer: Optional[ProductOffer] = (
@@ -88,6 +126,28 @@ def process_checkout(db: Session, request: CheckoutProcessRequest) -> CheckoutPr
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="O preenchimento de um CPF válido é obrigatório para a compra deste produto."
+            )
+
+    # 2.1. Validação condicional de Endereço de Cobrança (#21)
+    if getattr(product, "require_billing_address", False) and request.payment_method in ["credit_card", "hybrid_pix_card", "hybrid_two_cards"]:
+        missing_address = []
+        if not getattr(request, "billing_zip_code", None) or not request.billing_zip_code.strip():
+            missing_address.append("CEP")
+        if not getattr(request, "billing_street", None) or not request.billing_street.strip():
+            missing_address.append("Logradouro/Rua")
+        if not getattr(request, "billing_number", None) or not request.billing_number.strip():
+            missing_address.append("Número")
+        if not getattr(request, "billing_neighborhood", None) or not request.billing_neighborhood.strip():
+            missing_address.append("Bairro")
+        if not getattr(request, "billing_city", None) or not request.billing_city.strip():
+            missing_address.append("Cidade")
+        if not getattr(request, "billing_state", None) or not request.billing_state.strip():
+            missing_address.append("Estado (UF)")
+
+        if missing_address:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Endereço de cobrança incompleto. Campos obrigatórios: {', '.join(missing_address)}."
             )
 
     # 3. Definição do valor da cobrança (Oferta base + Order Bumps)
@@ -185,6 +245,31 @@ def process_checkout(db: Session, request: CheckoutProcessRequest) -> CheckoutPr
         amount_usd = coupon_res["final_amount_usd"]
         increment_coupon_use(db, coupon_id)
 
+    # 4.1. Desconto Automático por Método de Pagamento (Incentivo ao Pix e Cripto)
+    method_discount_percent = 0.0
+    if request.payment_method == "pix":
+        if getattr(product, "pix_discount_percent", 0.0) > 0:
+            method_discount_percent = float(product.pix_discount_percent)
+        if getattr(request, "card_fallback_applied", False) and getattr(product, "enable_card_fallback", True):
+            fallback_disc = float(getattr(product, "card_fallback_discount_percent", 0.0) or 0.0)
+            if fallback_disc > 0:
+                method_discount_percent += fallback_disc
+    elif request.payment_method == "crypto" and getattr(product, "crypto_discount_percent", 0.0) > 0:
+        method_discount_percent = float(product.crypto_discount_percent)
+
+    if method_discount_percent > 0:
+        method_discount_brl = round(amount_brl * (method_discount_percent / 100.0), 2)
+        amount_brl = max(1.0, round(amount_brl - method_discount_brl, 2))
+        discount_amount_brl = round(discount_amount_brl + method_discount_brl, 2)
+        if amount_usd:
+            method_discount_usd = round(amount_usd * (method_discount_percent / 100.0), 2)
+            amount_usd = max(0.5, round(amount_usd - method_discount_usd, 2))
+            discount_amount_usd = round(discount_amount_usd + method_discount_usd, 2)
+        logger.info(
+            f"Desconto por método ({request.payment_method} - {method_discount_percent}%): "
+            f"-R$ {method_discount_brl:.2f}. Total final: R$ {amount_brl:.2f}"
+        )
+
     # 5. Geração do código único do pedido
     date_prefix = datetime.now(timezone.utc).strftime("%Y%m%d")
     random_suffix = uuid.uuid4().hex[:6].upper()
@@ -193,6 +278,7 @@ def process_checkout(db: Session, request: CheckoutProcessRequest) -> CheckoutPr
     logger.info(f"Criando pedido {order_code} para {request.name} ({request.email}) - Produto: {product.name} (R$ {amount_brl:.2f})")
 
     raw_ddi = str(getattr(request, "phone_ddi", "55") or "55").strip().replace("+", "")
+    has_discount = bool(coupon_id or method_discount_percent > 0)
     order = Order(
         order_code=order_code,
         product_id=product.id,
@@ -208,8 +294,8 @@ def process_checkout(db: Session, request: CheckoutProcessRequest) -> CheckoutPr
         coupon_code=coupon_code_applied,
         discount_amount_brl=discount_amount_brl,
         discount_amount_usd=discount_amount_usd,
-        original_amount_brl=original_amount_brl if coupon_id else None,
-        original_amount_usd=original_amount_usd if coupon_id else None,
+        original_amount_brl=original_amount_brl if has_discount else None,
+        original_amount_usd=original_amount_usd if has_discount else None,
         payment_method=request.payment_method,
         status="pending",
         gateway_name="pagarme" if request.payment_method in ["pix", "credit_card"] else "nowpayments",
@@ -221,7 +307,16 @@ def process_checkout(db: Session, request: CheckoutProcessRequest) -> CheckoutPr
         utm_term=request.utm_term.strip() if getattr(request, "utm_term", None) else None,
         src=request.src.strip() if getattr(request, "src", None) else None,
         sck=request.sck.strip() if getattr(request, "sck", None) else None,
-        proposal_id=proposal.id if proposal else None
+        proposal_id=proposal.id if proposal else None,
+        ab_test_id=getattr(request, "ab_test_id", None),
+        ab_test_variant=getattr(request, "ab_test_variant", None),
+        billing_zip_code=request.billing_zip_code.strip() if getattr(request, "billing_zip_code", None) else None,
+        billing_street=request.billing_street.strip() if getattr(request, "billing_street", None) else None,
+        billing_number=request.billing_number.strip() if getattr(request, "billing_number", None) else None,
+        billing_complement=request.billing_complement.strip() if getattr(request, "billing_complement", None) else None,
+        billing_neighborhood=request.billing_neighborhood.strip() if getattr(request, "billing_neighborhood", None) else None,
+        billing_city=request.billing_city.strip() if getattr(request, "billing_city", None) else None,
+        billing_state=request.billing_state.strip() if getattr(request, "billing_state", None) else None
     )
     db.add(order)
     db.flush()
@@ -331,8 +426,63 @@ def process_checkout(db: Session, request: CheckoutProcessRequest) -> CheckoutPr
             external_transaction_id=order.external_transaction_id
         ))
     elif request.payment_method == "credit_card":
+        selected_inst = request.card_installments or request.installments or 1
+        max_inst = int(getattr(product, "max_installments", 12) or 12)
+        actual_inst = min(selected_inst, max_inst)
+        order.installments = actual_inst
+
+        free_inst = int(getattr(product, "free_installments_count", 1) or 1)
+        rate = float(getattr(product, "interest_rate_percent", 2.99) or 2.99)
+        payer = getattr(product, "interest_payer", "buyer") or "buyer"
+        if payer == "buyer" and actual_inst > free_inst and rate > 0:
+            from app.services.installment_service import calculate_single_installment
+            calc = calculate_single_installment(
+                principal=order.amount_brl,
+                installments=actual_inst,
+                free_installments_count=free_inst,
+                interest_rate_percent=rate,
+                interest_payer="buyer"
+            )
+            order.amount_brl = calc.total_amount
+
+        # Verificação de Recusa de Cartão de Crédito (#5)
+        clean_card = (request.card_number or "").replace(" ", "").replace("-", "")
+        holder_upper = (getattr(request, 'card_holder', '') or getattr(request, 'card_holder_name', '') or '').upper()
+        is_card_declined = (
+            clean_card.endswith("0002")
+            or clean_card.endswith("9999")
+            or "DECLINE" in holder_upper
+            or "RECUSAR" in holder_upper
+            or "RECUSADO" in holder_upper
+        )
+
+        if is_card_declined:
+            order.status = "failed"
+            db.commit()
+            security_service.log_card_attempt(
+                db,
+                ip_address=client_ip,
+                cpf=request.cpf,
+                email=request.email,
+                status="declined",
+                reason="card_declined",
+                order_code=order.order_code
+            )
+            try:
+                from app.services.webhook_dispatcher_service import dispatch_order_webhooks
+                dispatch_order_webhooks(order, "order.card_declined", db)
+            except Exception as wh_err:
+                logger.error(f"Erro ao disparar webhook order.card_declined: {wh_err}")
+
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail="Transação não autorizada. O cartão de crédito foi recusado pelo banco emissor.",
+                headers={"X-Error-Code": "card_declined"}
+            )
+
         order.status = "paid"
         order.paid_at = datetime.now(timezone.utc)
+        order.card_token = f"tok_card_{order.order_code.lower()}"
         order.qr_code_text = f"Pagamento aprovado via Cartão de Crédito ({order.order_code})"
 
         db.add(OrderPayment(
@@ -342,10 +492,18 @@ def process_checkout(db: Session, request: CheckoutProcessRequest) -> CheckoutPr
             amount_brl=order.amount_brl,
             status="paid",
             paid_at=order.paid_at,
-            installments=request.card_installments or request.installments or 1,
+            installments=actual_inst,
             card_last_four=request.card_number[-4:] if request.card_number and len(request.card_number) >= 4 else "4242",
             card_brand="visa"
         ))
+        security_service.log_card_attempt(
+            db,
+            ip_address=client_ip,
+            cpf=request.cpf,
+            email=request.email,
+            status="approved",
+            order_code=order.order_code
+        )
     elif request.payment_method == "hybrid_pix_card":
         order.hybrid_type = "pix_card"
         pix_amt = round(float(request.pix_amount_brl or 0.0), 2)
@@ -364,6 +522,26 @@ def process_checkout(db: Session, request: CheckoutProcessRequest) -> CheckoutPr
             )
 
         now_dt = datetime.now(timezone.utc)
+        clean_card = (request.card_number or "").replace(" ", "").replace("-", "")
+        holder_upper = (getattr(request, 'card_holder', '') or getattr(request, 'card_holder_name', '') or '').upper()
+        if clean_card.endswith("0002") or clean_card.endswith("9999") or "DECLINE" in holder_upper or "RECUSAR" in holder_upper:
+            order.status = "failed"
+            db.commit()
+            security_service.log_card_attempt(
+                db,
+                ip_address=client_ip,
+                cpf=request.cpf,
+                email=request.email,
+                status="declined",
+                reason="card_declined",
+                order_code=order.order_code
+            )
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail="Transação não autorizada. O cartão de crédito foi recusado pelo banco emissor.",
+                headers={"X-Error-Code": "card_declined"}
+            )
+
         card_last_4 = request.card_number[-4:] if request.card_number and len(request.card_number) >= 4 else "4242"
         # Parte 1: Cartão de Crédito (aprovado na transação inicial)
         db.add(OrderPayment(
@@ -427,6 +605,29 @@ def process_checkout(db: Session, request: CheckoutProcessRequest) -> CheckoutPr
             )
 
         now_dt = datetime.now(timezone.utc)
+        clean_c1 = (request.card_number or "").replace(" ", "").replace("-", "")
+        clean_c2 = (request.card2_number or "").replace(" ", "").replace("-", "")
+        h1 = (getattr(request, 'card_holder', '') or getattr(request, 'card_holder_name', '') or '').upper()
+        h2 = (getattr(request, 'card2_holder', '') or '').upper()
+        if (clean_c1.endswith("0002") or clean_c1.endswith("9999") or "DECLINE" in h1 or "RECUSAR" in h1
+                or clean_c2.endswith("0002") or clean_c2.endswith("9999") or "DECLINE" in h2 or "RECUSAR" in h2):
+            order.status = "failed"
+            db.commit()
+            security_service.log_card_attempt(
+                db,
+                ip_address=client_ip,
+                cpf=request.cpf,
+                email=request.email,
+                status="declined",
+                reason="card_declined",
+                order_code=order.order_code
+            )
+            raise HTTPException(
+                status_code=status.HTTP_402_PAYMENT_REQUIRED,
+                detail="Transação não autorizada. Um dos cartões foi recusado pelo banco emissor.",
+                headers={"X-Error-Code": "card_declined"}
+            )
+
         card1_last_4 = request.card_number[-4:] if request.card_number and len(request.card_number) >= 4 else "4242"
         card2_last_4 = request.card2_number[-4:] if request.card2_number and len(request.card2_number) >= 4 else "1234"
 
@@ -536,6 +737,12 @@ def process_checkout(db: Session, request: CheckoutProcessRequest) -> CheckoutPr
             dispatch_order_webhooks(order, "order.approved", db)
         except Exception as wh_err:
             logger.error(f"Erro ao disparar webhook order.approved: {wh_err}")
+        if order.ab_test_id and order.ab_test_variant:
+            try:
+                from app.services.ab_test_service import record_ab_test_conversion
+                record_ab_test_conversion(db, order.ab_test_id, order.ab_test_variant, order.amount_brl)
+            except Exception as ab_err:
+                logger.error(f"Erro ao registrar conversão de Teste A/B: {ab_err}")
 
     # 8. Atribuição de Afiliado e Registro de Comissão
     if getattr(request, "affiliate_code", None):
@@ -607,6 +814,7 @@ def _build_order_status_response(order: Order) -> OrderStatusResponse:
         active_upsell = next((u for u in order.product.upsells if u.is_active), None)
 
     has_upsell = active_upsell is not None
+    enable_downsell = bool(active_upsell and getattr(active_upsell, 'enable_downsell', False))
     upsell_url = None
     if has_upsell and order.product:
         upsell_url = active_upsell.external_url or f"/upsell/{order.product.slug}?order_code={order.order_code}"
@@ -616,6 +824,24 @@ def _build_order_status_response(order: Order) -> OrderStatusResponse:
         paid_amt = order.amount_brl
     remaining_amt = max(0.0, round(order.amount_brl - paid_amt, 2))
     payment_resps = [OrderPaymentResponse.model_validate(p) for p in order.payments]
+    from app.schemas.order import OrderInstallmentItemResponse
+    inst_resps = [
+        OrderInstallmentItemResponse(
+            id=i.id,
+            installment_number=i.installment_number,
+            total_installments=i.total_installments,
+            amount_brl=i.amount_brl,
+            due_date=i.due_date,
+            status=i.status,
+            payment_method=i.payment_method,
+            bank_slip_url=i.bank_slip_url,
+            bank_slip_bar_code=i.bank_slip_bar_code,
+            qr_code_base64=i.qr_code_base64,
+            qr_code_text=i.qr_code_text,
+            paid_at=i.paid_at
+        )
+        for i in getattr(order, 'carnet_installments', [])
+    ]
 
     return OrderStatusResponse(
         order_id=order.id,
@@ -634,8 +860,10 @@ def _build_order_status_response(order: Order) -> OrderStatusResponse:
         paid_amount_brl=paid_amt,
         remaining_amount_brl=remaining_amt,
         payments=payment_resps,
+        installments_list=inst_resps,
         thank_you_url=thank_you_url,
         has_upsell=has_upsell,
+        enable_downsell=enable_downsell,
         upsell_url=upsell_url,
         external_transaction_id=order.external_transaction_id,
         crypto_wallet_address=order.crypto_wallet_address,
@@ -706,6 +934,13 @@ def simulate_order_payment(db: Session, order_id: int) -> OrderStatusResponse:
         dispatch_order_webhooks(order, "order.approved", db)
     except Exception as wh_err:
         logger.error(f"Erro ao disparar webhook order.approved (simulação): {wh_err}")
+
+    if order.ab_test_id and order.ab_test_variant:
+        try:
+            from app.services.ab_test_service import record_ab_test_conversion
+            record_ab_test_conversion(db, order.ab_test_id, order.ab_test_variant, order.amount_brl)
+        except Exception as ab_err:
+            logger.error(f"Erro ao registrar conversão de Teste A/B na simulação: {ab_err}")
 
     logger.info(f"Pagamento do pedido {order.order_code} confirmado com sucesso via simulação sandbox!")
     return get_order_status(db, order_id)

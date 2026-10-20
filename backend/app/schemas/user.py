@@ -18,7 +18,17 @@ class UserResponse(BaseModel):
     name: str
     role: str
     is_active: bool
+    document: Optional[str] = None
+    document_type: Optional[str] = "cpf"
+    phone: Optional[str] = None
+    pix_key: Optional[str] = None
+    pix_key_type: Optional[str] = "cpf"
+    crypto_wallet: Optional[str] = None
+    crypto_network: Optional[str] = "polygon"
+    external_recipient_id: Optional[str] = None
+    has_financial_profile: Optional[bool] = False
     created_at: datetime
+    updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -111,3 +121,46 @@ class PasswordResetValidateResponse(BaseModel):
     email: Optional[str] = None
     name: Optional[str] = None
     detail: Optional[str] = None
+
+
+class UserProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    current_password: Optional[str] = None
+    new_password: Optional[str] = None
+
+    @field_validator("new_password")
+    @classmethod
+    def validate_new_password_strength(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v != "":
+            return validate_password_strength_func(v)
+        return v
+
+
+class UserFinancialProfileUpdate(BaseModel):
+    document: Optional[str] = None
+    document_type: Optional[str] = "cpf"
+    phone: Optional[str] = None
+    pix_key: Optional[str] = None
+    pix_key_type: Optional[str] = "cpf" # 'cpf', 'cnpj', 'email', 'phone', 'random'
+    crypto_wallet: Optional[str] = None
+    crypto_network: Optional[str] = "polygon"
+    external_recipient_id: Optional[str] = None
+
+
+class UserFinancialProfileResponse(BaseModel):
+    user_id: int
+    name: str
+    email: EmailStr
+    role: str
+    document: Optional[str] = None
+    document_type: Optional[str] = "cpf"
+    phone: Optional[str] = None
+    pix_key: Optional[str] = None
+    pix_key_type: Optional[str] = "cpf"
+    crypto_wallet: Optional[str] = None
+    crypto_network: Optional[str] = "polygon"
+    external_recipient_id: Optional[str] = None
+    has_financial_profile: bool = False
+    updated_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)

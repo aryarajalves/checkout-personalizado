@@ -359,3 +359,81 @@
   color: #0f172a;
 }
 
+/* Badges e Destaques de Desconto por Método de Pagamento */
+.checkout-payment-tab {
+  position: relative;
+}
+
+.payment-discount-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  letter-spacing: 0.02em;
+  line-height: 1.2;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  margin-top: 2px;
+}
+
+.payment-discount-badge.pix-badge {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+}
+
+.payment-discount-badge.crypto-badge {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+  color: #ffffff;
+}
+
+.checkout-pricing-row.method-discount {
+  background-color: #f0fdf4;
+  padding: 6px 8px;
+  border-radius: 6px;
+  margin: 2px 0;
+}
+
+/* Animações e Estilos para Exit-Intent Popup & Prova Social */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleUp {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes slideUpToast {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.social-proof-toast {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+@media (max-width: 640px) {
+  .social-proof-toast {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    max-width: calc(100% - 24px);
+  }
+}
+
+

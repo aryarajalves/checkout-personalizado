@@ -3,43 +3,36 @@ import { describe, it, expect, vi } from 'vitest';
 import Sidebar from './Sidebar';
 
 describe('Sidebar Component', () => {
-  it('renders "Projeto Base" title and logo', () => {
+  it('renders "Checkout Jords" title and logo', () => {
     render(<Sidebar />);
-    expect(screen.getByText('Projeto Base')).toBeInTheDocument();
+    expect(screen.getByText('Checkout Jords')).toBeInTheDocument();
     expect(screen.getByTestId('logo-icon')).toBeInTheDocument();
   });
 
   it('renders categorized menu sections and buttons only for superadmin', () => {
-    // Superadmin vê as 3 categorias e todos os botões correspondentes
+    // Superadmin vê os 4 módulos principais
     const superAdminUser = { name: 'Super Admin', email: 'admin@test.com', role: 'superadmin' };
     const { unmount } = render(<Sidebar user={superAdminUser} />);
     expect(screen.queryByText('Meus vídeos')).not.toBeInTheDocument();
 
-    // Categorias
-    expect(screen.getByTestId('nav-section-catalog')).toHaveTextContent('Catálogo & Vendas');
-    expect(screen.getByTestId('nav-section-finance')).toHaveTextContent('Financeiro');
-    expect(screen.getByTestId('nav-section-system')).toHaveTextContent('Sistema & Segurança');
+    // Seção principal
+    expect(screen.getByTestId('nav-section-main')).toHaveTextContent('Módulos Principais');
 
-    // Botões
-    expect(screen.getByText('Produtos & Ofertas')).toBeInTheDocument();
-    expect(screen.getByText('Cupons de Desconto')).toBeInTheDocument();
-    expect(screen.getByText('Gestão de Afiliados')).toBeInTheDocument();
-    expect(screen.getByText('Recuperação de Vendas')).toBeInTheDocument();
-    expect(screen.getByText('Gateways & Split')).toBeInTheDocument();
-    expect(screen.getByText('Backup Automático')).toBeInTheDocument();
-    expect(screen.getByText('Gerenciamento de logs')).toBeInTheDocument();
-    expect(screen.getByText('Gestão de Usuário')).toBeInTheDocument();
+    // Botões dos 4 Módulos
+    expect(screen.getByText('Vendas & Comercial')).toBeInTheDocument();
+    expect(screen.getByText('Produtos & Marketing')).toBeInTheDocument();
+    expect(screen.getByText('Financeiro')).toBeInTheDocument();
+    expect(screen.getByText('Configurações & Sistema')).toBeInTheDocument();
     unmount();
 
-    // Usuário comum NÃO vê as categorias nem os botões
+    // Usuário comum NÃO vê a seção de módulos de administração
     const regularUser = { name: 'Comum', email: 'comum@test.com', role: 'user' };
     render(<Sidebar user={regularUser} />);
-    expect(screen.queryByTestId('nav-section-catalog')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('nav-section-finance')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('nav-section-system')).not.toBeInTheDocument();
-    expect(screen.queryByText('Backup Automático')).not.toBeInTheDocument();
-    expect(screen.queryByText('Gerenciamento de logs')).not.toBeInTheDocument();
-    expect(screen.queryByText('Gestão de Usuário')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('nav-section-main')).not.toBeInTheDocument();
+    expect(screen.queryByText('Vendas & Comercial')).not.toBeInTheDocument();
+    expect(screen.queryByText('Produtos & Marketing')).not.toBeInTheDocument();
+    expect(screen.queryByText('Financeiro')).not.toBeInTheDocument();
+    expect(screen.queryByText('Configurações & Sistema')).not.toBeInTheDocument();
   });
 
   it('renders user profile details and logout button', () => {
@@ -61,8 +54,24 @@ describe('Sidebar Component', () => {
     const superAdminUser = { name: 'Super Admin', email: 'admin@test.com', role: 'superadmin' };
     render(<Sidebar user={superAdminUser} activeTab="users" onSelectTab={onSelectTabMock} />);
 
-    const backupBtn = screen.getByTestId('nav-item-backup');
-    fireEvent.click(backupBtn);
-    expect(onSelectTabMock).toHaveBeenCalledWith('backup');
+    // Quando activeTab é 'users', o botão 'Configurações & Sistema' deve estar ativo
+    const systemBtn = screen.getByTestId('nav-item-system');
+    expect(systemBtn.className).toContain('active');
+
+    // Clicar em Produtos & Marketing chama onSelectTab com 'products'
+    const productsBtn = screen.getByTestId('nav-item-products');
+    fireEvent.click(productsBtn);
+    expect(onSelectTabMock).toHaveBeenCalledWith('products');
+  });
+
+  it('renders settings button and triggers onOpenSettings when clicked', () => {
+    const onOpenSettingsMock = vi.fn();
+    const user = { name: 'João Afiliado', email: 'joao@afiliado.com', role: 'user' };
+    render(<Sidebar user={user} onOpenSettings={onOpenSettingsMock} />);
+
+    const settingsBtn = screen.getByTestId('sidebar-settings-btn');
+    expect(settingsBtn).toBeInTheDocument();
+    fireEvent.click(settingsBtn);
+    expect(onOpenSettingsMock).toHaveBeenCalledTimes(1);
   });
 });

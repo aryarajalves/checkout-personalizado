@@ -14,7 +14,7 @@ from app.schemas.gateway import (
     GatewayTestConnectionResponse
 )
 
-SUPPORTED_GATEWAYS = ["pagarme", "nowpayments"]
+SUPPORTED_GATEWAYS = ["pagarme", "asaas", "nowpayments"]
 
 def mask_secret(secret: Optional[str]) -> Optional[str]:
     """Mascara chaves sensíveis preservando prefixo e sufixo para segurança."""
@@ -149,6 +149,28 @@ def test_gateway_connection(data: GatewayTestConnectionRequest, db: Session) -> 
                     return GatewayTestConnectionResponse(
                         success=False,
                         message=f"Pagar.me retornou status {res.status_code}: {res.text[:200]}"
+                    )
+
+        elif data.gateway_name == "asaas":
+            base_url = "https://sandbox.asaas.com/api/v3" if environment == "sandbox" else "https://api.asaas.com/api/v3"
+            url = f"{base_url}/customers?limit=1"
+            with httpx.Client(timeout=10.0) as client:
+                res = client.get(url, headers={"access_token": api_key})
+                if res.status_code == 200:
+                    return GatewayTestConnectionResponse(
+                        success=True,
+                        message=f"Conexão com Asaas ({environment.upper()}) estabelecida com sucesso! API Key válida.",
+                        details={"status_code": res.status_code}
+                    )
+                elif res.status_code == 401:
+                    return GatewayTestConnectionResponse(
+                        success=False,
+                        message="Falha de autenticação no Asaas. Verifique sua chave de API (access_token)."
+                    )
+                else:
+                    return GatewayTestConnectionResponse(
+                        success=False,
+                        message=f"Asaas retornou status {res.status_code}: {res.text[:200]}"
                     )
 
         elif data.gateway_name == "nowpayments":

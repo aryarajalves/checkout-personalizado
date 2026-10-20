@@ -12,6 +12,7 @@ export default function CheckoutOrderSummary({
   totalOverrideUsd,
   usdRate,
   appliedCoupon,
+  paymentMethodDiscount,
 }) {
   if (!product) return null;
 
@@ -87,6 +88,19 @@ export default function CheckoutOrderSummary({
               - {isCrypto && appliedCoupon.discount_amount_usd
                 ? formatCurrency(appliedCoupon.discount_amount_usd, 'USD')
                 : formatCurrency(appliedCoupon.discount_amount_brl, 'BRL')}
+            </span>
+          </div>
+        )}
+
+        {paymentMethodDiscount && paymentMethodDiscount.percent > 0 && (
+          <div className="checkout-pricing-row method-discount" data-testid="summary-method-discount" style={{ color: '#0284c7', fontWeight: 600 }}>
+            <span className="checkout-pricing-label">
+              {paymentMethod === 'pix' ? `🔥 Desconto Pix (${paymentMethodDiscount.percent}%)` : `⚡ Desconto Cripto (${paymentMethodDiscount.percent}%)`}
+            </span>
+            <span className="checkout-pricing-val">
+              - {isCrypto && paymentMethodDiscount.amount_usd
+                ? formatCurrency(paymentMethodDiscount.amount_usd, 'USD')
+                : formatCurrency(paymentMethodDiscount.amount_brl, 'BRL')}
             </span>
           </div>
         )}

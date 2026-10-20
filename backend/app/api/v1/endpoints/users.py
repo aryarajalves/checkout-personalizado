@@ -12,6 +12,8 @@ from app.core.security import (
     decode_access_token
 )
 from app.models.user import User, Invite, PasswordResetToken, RegistrationVerification
+from app.models.gateway import SplitRecipient
+from app.models.affiliate import Affiliate
 from app.services.email import send_verification_email
 from app.schemas.user import (
     UserLogin,
@@ -28,7 +30,10 @@ from app.schemas.user import (
     ResendCodeRequest,
     PasswordResetRequestResponse,
     PasswordResetConfirm,
-    PasswordResetValidateResponse
+    PasswordResetValidateResponse,
+    UserProfileUpdate,
+    UserFinancialProfileUpdate,
+    UserFinancialProfileResponse,
 )
 
 router = APIRouter(prefix="/auth", tags=["Auth & Users"])
@@ -96,12 +101,166 @@ def login(login_data: UserLogin, db: Session = Depends(get_db)):
 
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: User = Depends(get_current_user)):
-    return current_user
+    user_dict = UserResponse.model_validate(current_user)
+    user_dict.has_financial_profile = bool(current_user.pix_key or current_user.document)
+    return user_dict
+
+@router.put("/me/profile", response_model=UserResponse)
+def update_my_profile(
+    profile_data: UserProfileUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Atualiza o perfil do usuário logado (nome e/ou troca de senha)."""
+    if profile_data.name and profile_data.name.strip():
+        current_user.name = profile_data.name.strip()
+        
+    if profile_data.new_password:
+        if not profile_data.current_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Informe a sua senha atual para definir uma nova senha."
+            )
+        if not verify_password(profile_data.current_password, current_user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A senha atual informada está incorreta."
+            )
+        current_user.hashed_password = get_password_hash(profile_data.new_password)
+        
+    current_user.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(current_user)
+    
+    # Sincroniza nome em split_recipients e affiliates se existirem
+    split_rec = db.query(SplitRecipient).filter(SplitRecipient.user_id == current_user.id).first()
+    if split_rec:
+        split_rec.name = current_user.name
+    aff = db.query(Affiliate).filter(Affiliate.user_id == current_user.id).first()
+    if aff:
+        aff.name = current_user.name
+    db.commit()
+    
+    res = UserResponse.model_validate(current_user)
+    res.has_financial_profile = bool(current_user.pix_key or current_user.document)
+    return res
+
+@router.get("/me/financial", response_model=UserFinancialProfileResponse)
+def get_my_financial_profile(current_user: User = Depends(get_current_user)):
+    """Retorna os dados financeiros e de repasse (Pix/Cripto) do usuário logado."""
+    has_profile = bool(current_user.pix_key or current_user.document)
+    return UserFinancialProfileResponse(
+        user_id=current_user.id,
+        name=current_user.name,
+        email=current_user.email,
+        role=current_user.role,
+        document=current_user.document,
+        document_type=current_user.document_type or "cpf",
+        phone=current_user.phone,
+        pix_key=current_user.pix_key,
+        pix_key_type=current_user.pix_key_type or "cpf",
+        crypto_wallet=current_user.crypto_wallet,
+        crypto_network=current_user.crypto_network or "polygon",
+        external_recipient_id=current_user.external_recipient_id,
+        has_financial_profile=has_profile,
+        updated_at=current_user.updated_at
+    )
+
+@router.put("/me/financial", response_model=UserFinancialProfileResponse)
+def update_my_financial_profile(
+    fin_data: UserFinancialProfileUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Atualiza os dados de repasse financeiro do usuário e sincroniza com Coprodução e Afiliação."""
+    if fin_data.document is not None:
+        current_user.document = fin_data.document.strip() if fin_data.document else None
+    if fin_data.document_type is not None:
+        current_user.document_type = fin_data.document_type
+    if fin_data.phone is not None:
+        current_user.phone = fin_data.phone.strip() if fin_data.phone else None
+    if fin_data.pix_key is not None:
+        current_user.pix_key = fin_data.pix_key.strip() if fin_data.pix_key else None
+    if fin_data.pix_key_type is not None:
+        current_user.pix_key_type = fin_data.pix_key_type
+    if fin_data.crypto_wallet is not None:
+        current_user.crypto_wallet = fin_data.crypto_wallet.strip() if fin_data.crypto_wallet else None
+    if fin_data.crypto_network is not None:
+        current_user.crypto_network = fin_data.crypto_network
+    if fin_data.external_recipient_id is not None:
+        current_user.external_recipient_id = fin_data.external_recipient_id.strip() if fin_data.external_recipient_id else None
+        
+    current_user.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(current_user)
+
+    # Sincroniza com SplitRecipient
+    split_rec = db.query(SplitRecipient).filter(
+        (SplitRecipient.user_id == current_user.id) | (SplitRecipient.email == current_user.email)
+    ).first()
+    if split_rec:
+        split_rec.user_id = current_user.id
+        split_rec.name = current_user.name
+        split_rec.document = current_user.document
+        split_rec.pix_key = current_user.pix_key
+        split_rec.pix_key_type = current_user.pix_key_type or "cpf"
+        split_rec.crypto_wallet = current_user.crypto_wallet
+        split_rec.crypto_network = current_user.crypto_network or "polygon"
+        split_rec.external_recipient_id = current_user.external_recipient_id
+    else:
+        new_rec = SplitRecipient(
+            user_id=current_user.id,
+            name=current_user.name,
+            email=current_user.email,
+            document=current_user.document,
+            pix_key=current_user.pix_key,
+            pix_key_type=current_user.pix_key_type or "cpf",
+            crypto_wallet=current_user.crypto_wallet,
+            crypto_network=current_user.crypto_network or "polygon",
+            external_recipient_id=current_user.external_recipient_id,
+            default_percentage=0.0,
+            is_active=True
+        )
+        db.add(new_rec)
+
+    # Sincroniza com Affiliate caso exista vínculo
+    aff = db.query(Affiliate).filter(
+        (Affiliate.user_id == current_user.id) | (Affiliate.email == current_user.email)
+    ).first()
+    if aff:
+        aff.user_id = current_user.id
+        aff.name = current_user.name
+        aff.document = current_user.document
+        aff.pix_key = current_user.pix_key
+        aff.pix_key_type = current_user.pix_key_type or "cpf"
+        aff.crypto_wallet = current_user.crypto_wallet
+        if current_user.phone:
+            aff.phone = current_user.phone
+            
+    db.commit()
+
+    has_profile = bool(current_user.pix_key or current_user.document)
+    return UserFinancialProfileResponse(
+        user_id=current_user.id,
+        name=current_user.name,
+        email=current_user.email,
+        role=current_user.role,
+        document=current_user.document,
+        document_type=current_user.document_type or "cpf",
+        phone=current_user.phone,
+        pix_key=current_user.pix_key,
+        pix_key_type=current_user.pix_key_type or "cpf",
+        crypto_wallet=current_user.crypto_wallet,
+        crypto_network=current_user.crypto_network or "polygon",
+        external_recipient_id=current_user.external_recipient_id,
+        has_financial_profile=has_profile,
+        updated_at=current_user.updated_at
+    )
 
 @router.get("/users", response_model=List[UserResponse])
 def list_users(
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_superadmin)
+    current_user: User = Depends(require_admin_or_superadmin)
 ):
     return db.query(User).order_by(User.id.asc()).all()
 

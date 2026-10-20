@@ -1,32 +1,51 @@
 """
 Endpoints públicos para o fluxo de checkout e consulta de pedidos.
 """
-from fastapi import APIRouter, Depends, status
+import re
+import httpx
+from typing import List
+from fastapi import APIRouter, Depends, status, Request, HTTPException
 from sqlalchemy.orm import Session
+from app.core.logger import logger
 
 from app.core.database import get_db
 from app.schemas.order import (
     CheckoutProcessRequest,
     CheckoutProcessResponse,
     OrderStatusResponse,
-    Web3PaymentConfirmRequest
+    Web3PaymentConfirmRequest,
+    OneClickBuyRequest,
+    OneClickBuyResponse
 )
 from app.schemas.coupon import ValidateCouponRequest, ValidateCouponResponse
 from app.schemas.recovery import CheckoutLeadCaptureRequest, CheckoutLeadCaptureResponse
+from app.schemas.product import SocialProofNotificationItem
 from app.services import checkout_service
+from app.services import upsell_service
 
 router = APIRouter()
 
 @router.post("/process", response_model=CheckoutProcessResponse, status_code=status.HTTP_201_CREATED)
 def process_checkout_endpoint(
     payload: CheckoutProcessRequest,
+    request: Request,
     db: Session = Depends(get_db)
 ):
     """
     Processa a finalização de compra no checkout público.
     Gera o pedido, registra os splits de pagamento e gera o Pix Copia e Cola / QR Code via Pagar.me.
     """
-    return checkout_service.process_checkout(db, payload)
+    client_ip = request.headers.get("x-forwarded-for")
+    if client_ip:
+        client_ip = client_ip.split(",")[0].strip()
+    if not client_ip:
+        client_ip = request.client.host if request.client else "127.0.0.1"
+
+    if payload.payment_method in ["asaas_installments", "boleto_parcelado", "carnet"]:
+        from app.services.asaas_checkout_service import process_asaas_installment_checkout
+        return process_asaas_installment_checkout(db, payload)
+
+    return checkout_service.process_checkout(db, payload, client_ip=client_ip)
 
 
 @router.get("/orders/{order_id}/status", response_model=OrderStatusResponse)
@@ -162,4 +181,155 @@ def capture_lead_endpoint(
     return recovery_service.capture_lead(db, payload)
 
 
+@router.get("/social-proof/{slug}", response_model=List[SocialProofNotificationItem])
+def get_social_proof_notifications(
+    slug: str,
+    db: Session = Depends(get_db)
+):
+    """
+    Retorna notificações recentes de compras aprovadas (ou simuladas/híbridas conforme configuração)
+    para o pop-up de Prova Social ao vivo no checkout.
+    """
+    from app.models.product import Product, ProductOffer
+    from app.models.order import Order
+    from datetime import datetime, timezone
+
+    clean_slug = slug.strip().lower()
+    offer = db.query(ProductOffer).filter(ProductOffer.slug == clean_slug).first()
+    product = offer.product if offer else db.query(Product).filter(Product.slug == clean_slug).first()
+
+    if not product or not product.enable_social_proof:
+        return []
+
+    mode = product.social_proof_mode or "hybrid"
+    notifications: List[SocialProofNotificationItem] = []
+
+    def mask_name(name: str) -> str:
+        parts = [p for p in (name or "").strip().split() if p]
+        if not parts:
+            return "Cliente"
+        if len(parts) == 1:
+            return parts[0]
+        return f"{parts[0]} {parts[-1][0].upper()}."
+
+    def format_payment_method(pm: str) -> str:
+        pm_map = {
+            "pix": "Pix",
+            "credit_card": "Cartão de Crédito",
+            "crypto": "Cripto"
+        }
+        return pm_map.get(pm, "Pix")
+
+    def calc_time_ago(dt: datetime) -> str:
+        if not dt:
+            return "há poucos minutos"
+        now = datetime.now(timezone.utc)
+        order_dt = dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+        diff = now - order_dt
+        minutes = max(1, int(diff.total_seconds() // 60))
+        if minutes < 60:
+            return f"há {minutes} min"
+        hours = int(minutes // 60)
+        if hours < 24:
+            return f"há {hours}h"
+        days = int(hours // 24)
+        return f"há {days}d"
+
+    simulated_pool = [
+        {"customer_name": "Lucas M.", "city": "São Paulo", "state": "SP", "payment_method": "Pix", "time_ago": "há 2 min"},
+        {"customer_name": "Mariana S.", "city": "Rio de Janeiro", "state": "RJ", "payment_method": "Cartão de Crédito", "time_ago": "há 4 min"},
+        {"customer_name": "Gabriel C.", "city": "Belo Horizonte", "state": "MG", "payment_method": "Pix", "time_ago": "há 7 min"},
+        {"customer_name": "Camila R.", "city": "Curitiba", "state": "PR", "payment_method": "Pix", "time_ago": "há 11 min"},
+        {"customer_name": "Felipe A.", "city": "Porto Alegre", "state": "RS", "payment_method": "Cartão de Crédito", "time_ago": "há 15 min"},
+        {"customer_name": "Beatriz L.", "city": "Brasília", "state": "DF", "payment_method": "Pix", "time_ago": "há 19 min"},
+        {"customer_name": "Rafael N.", "city": "Salvador", "state": "BA", "payment_method": "Cripto", "time_ago": "há 26 min"},
+        {"customer_name": "Juliana T.", "city": "Goiânia", "state": "GO", "payment_method": "Pix", "time_ago": "há 34 min"},
+    ]
+
+    brazilian_cities = [
+        ("São Paulo", "SP"), ("Rio de Janeiro", "RJ"), ("Belo Horizonte", "MG"),
+        ("Curitiba", "PR"), ("Porto Alegre", "RS"), ("Brasília", "DF"),
+        ("Salvador", "BA"), ("Fortaleza", "CE"), ("Recife", "PE"), ("Florianópolis", "SC")
+    ]
+
+    if mode in ("real", "hybrid"):
+        real_orders = db.query(Order).filter(
+            Order.product_id == product.id,
+            Order.status == "paid"
+        ).order_by(Order.created_at.desc()).limit(10).all()
+
+        for idx, o in enumerate(real_orders):
+            city, state = brazilian_cities[idx % len(brazilian_cities)]
+            notifications.append(SocialProofNotificationItem(
+                customer_name=mask_name(o.customer_name),
+                city=city,
+                state=state,
+                payment_method=format_payment_method(o.payment_method),
+                time_ago=calc_time_ago(o.paid_at or o.created_at)
+            ))
+
+    if mode == "simulated" or (mode == "hybrid" and len(notifications) < 5):
+        needed = 8 - len(notifications) if mode == "hybrid" else 8
+        for item in simulated_pool[:needed]:
+            notifications.append(SocialProofNotificationItem(**item))
+
+    return notifications
+
+
+@router.post("/one-click-buy", response_model=OneClickBuyResponse, status_code=status.HTTP_200_OK)
+def one_click_buy_endpoint(
+    payload: OneClickBuyRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Processa a aceitação de UpSell ou DownSell com 1 clique:
+    - Cartão de Crédito: cobra automaticamente usando tokenização e aprova imediatamente.
+    - Pix: gera QR Code e Copia e Cola instantâneo para pagamento imediato (Opção A).
+    """
+    return upsell_service.process_one_click_buy(db, payload)
+
+
+@router.get("/cep/{cep}", status_code=status.HTTP_200_OK)
+async def lookup_cep_endpoint(cep: str):
+    """
+    Consulta endereço no ViaCEP com validação, sanitização e tratamento de erro (#21).
+    """
+    clean_cep = re.sub(r"\D", "", cep)
+    if len(clean_cep) != 8:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="CEP inválido. Deve conter 8 dígitos numéricos."
+        )
+
+    url = f"https://viacep.com.br/ws/{clean_cep}/json/"
+    try:
+        async with httpx.AsyncClient(timeout=4.0) as client:
+            resp = await client.get(url)
+            if resp.status_code != 200:
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail="Serviço ViaCEP temporariamente indisponível."
+                )
+            data = resp.json()
+            if data.get("erro") is True:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="CEP não encontrado."
+                )
+            return {
+                "cep": data.get("cep", clean_cep),
+                "street": data.get("logradouro", ""),
+                "complement": data.get("complemento", ""),
+                "neighborhood": data.get("bairro", ""),
+                "city": data.get("localidade", ""),
+                "state": data.get("uf", "")
+            }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        logger.error(f"Erro ao consultar ViaCEP para CEP '{clean_cep}': {exc}")
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Falha na comunicação com o serviço de busca de CEP."
+        )
 

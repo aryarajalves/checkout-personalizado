@@ -29,13 +29,44 @@ def clean_ref_code(code: str) -> str:
 
 def create_affiliate(db: Session, payload: AffiliateCreate) -> Affiliate:
     """Cadastra um novo afiliado com código de indicação único e chave Pix/Cripto."""
-    clean_email = payload.email.strip().lower()
+    from app.models.user import User
+
+    linked_user = None
+    if payload.user_id:
+        linked_user = db.query(User).filter(User.id == payload.user_id).first()
+        if not linked_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Usuário selecionado não foi encontrado."
+            )
+        existing_user_aff = db.query(Affiliate).filter(Affiliate.user_id == linked_user.id).first()
+        if existing_user_aff:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"O usuário '{linked_user.name}' já está cadastrado como parceiro afiliado."
+            )
+
+    name = payload.name.strip() if payload.name else (linked_user.name if linked_user else None)
+    if not name:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="O nome do afiliado é obrigatório.")
+
+    email_source = payload.email or (linked_user.email if linked_user else None)
+    if not email_source:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="O e-mail do afiliado é obrigatório.")
+    clean_email = str(email_source).strip().lower()
+
     existing_email = db.query(Affiliate).filter(Affiliate.email == clean_email).first()
     if existing_email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Já existe um afiliado cadastrado com este e-mail."
         )
+
+    phone = payload.phone.strip() if payload.phone else (linked_user.phone or "" if linked_user else "")
+    document = payload.document.strip() if payload.document else (linked_user.document if linked_user else None)
+    pix_key = payload.pix_key.strip() if payload.pix_key else (linked_user.pix_key if linked_user else None)
+    pix_key_type = payload.pix_key_type or (linked_user.pix_key_type or "cpf" if linked_user else "cpf")
+    crypto_wallet = payload.crypto_wallet.strip() if payload.crypto_wallet else (linked_user.crypto_wallet if linked_user else None)
 
     code = clean_ref_code(payload.affiliate_code) if payload.affiliate_code else generate_default_affiliate_code()
     if not code:
@@ -49,14 +80,15 @@ def create_affiliate(db: Session, payload: AffiliateCreate) -> Affiliate:
         )
 
     affiliate = Affiliate(
-        name=payload.name.strip(),
+        user_id=linked_user.id if linked_user else None,
+        name=name,
         email=clean_email,
-        phone=payload.phone.strip(),
-        document=payload.document.strip() if payload.document else None,
+        phone=phone,
+        document=document,
         affiliate_code=code,
-        pix_key=payload.pix_key.strip() if payload.pix_key else None,
-        pix_key_type=payload.pix_key_type or "cpf",
-        crypto_wallet=payload.crypto_wallet.strip() if payload.crypto_wallet else None,
+        pix_key=pix_key,
+        pix_key_type=pix_key_type,
+        crypto_wallet=crypto_wallet,
         default_commission_percent=round(payload.default_commission_percent, 2),
         is_active=payload.is_active,
         notes=payload.notes.strip() if payload.notes else None,
@@ -67,6 +99,7 @@ def create_affiliate(db: Session, payload: AffiliateCreate) -> Affiliate:
 
     logger.info(f"Afiliado #{affiliate.id} ({affiliate.name} - {affiliate.affiliate_code}) cadastrado com sucesso.")
     return affiliate
+
 
 
 def update_affiliate(db: Session, affiliate_id: int, payload: AffiliateUpdate) -> Affiliate:

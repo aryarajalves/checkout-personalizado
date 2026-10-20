@@ -7,6 +7,7 @@ from app.api.v1.endpoints.users import get_current_user
 from app.models.user import User
 from app.schemas.custom_proposal import (
     CustomProposalCreate,
+    CustomProposalUpdate,
     CustomProposalResponse,
     ProposalPublicResponse,
     ProposalMetricsResponse,
@@ -27,7 +28,7 @@ def create_proposal_endpoint(
     Cria uma nova proposta de negociação personalizada (High-Ticket / Closer).
     Gera um link exclusivo com validade e condições customizadas.
     """
-    origin = request.headers.get("origin") or "http://localhost:3001"
+    origin = request.headers.get("origin") or "http://localhost:3003"
     return proposal_service.create_proposal(db, data, base_url=origin)
 
 
@@ -47,6 +48,7 @@ def list_proposals_endpoint(
     request: Request,
     product_id: Optional[int] = Query(None, description="Filtrar por produto"),
     status: Optional[str] = Query(None, description="Filtrar por status ('active', 'paid', 'expired', 'canceled')"),
+    payment_method: Optional[str] = Query(None, description="Filtrar por forma de pagamento ('pix', 'credit_card', 'hybrid_pix_card', 'hybrid_two_cards', 'all')"),
     search: Optional[str] = Query(None, description="Buscar por código, cliente, closer ou e-mail"),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
@@ -56,17 +58,33 @@ def list_proposals_endpoint(
     """
     Lista as propostas customizadas com filtros, paginação e status dinâmico.
     """
-    origin = request.headers.get("origin") or "http://localhost:3001"
+    origin = request.headers.get("origin") or "http://localhost:3003"
     items, total = proposal_service.list_proposals(
         db=db,
         product_id=product_id,
         status_filter=status,
+        payment_method=payment_method,
         search=search,
         skip=skip,
         limit=limit,
         base_url=origin
     )
     return {"items": items, "total": total}
+
+
+@router.put("/{proposal_id}", response_model=CustomProposalResponse)
+def update_proposal_endpoint(
+    proposal_id: int,
+    data: CustomProposalUpdate,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Atualiza dados e condições de uma proposta comercial existente.
+    """
+    origin = request.headers.get("origin") or "http://localhost:3003"
+    return proposal_service.update_proposal(db, proposal_id, data, base_url=origin)
 
 
 @router.get("/public/{code}", response_model=ProposalPublicResponse)
@@ -91,7 +109,7 @@ def get_proposal_detail_endpoint(
     """
     Retorna os detalhes completos de uma proposta específica.
     """
-    origin = request.headers.get("origin") or "http://localhost:3001"
+    origin = request.headers.get("origin") or "http://localhost:3003"
     proposal = db.query(proposal_service.CustomProposal).filter(proposal_service.CustomProposal.id == proposal_id).first()
     if not proposal:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Proposta não encontrada.")

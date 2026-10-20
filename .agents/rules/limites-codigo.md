@@ -19,15 +19,17 @@ Toda vez que você criar ou atualizar qualquer tipo de código no sistema (backe
 
 1. **Auditoria Obrigatória de Tamanho:**
    - Inspecione as linhas dos arquivos afetados e criados.
-2. **Alerta Explícito ao Usuário:**
-   - Ao final da sua resposta, você **DEVE obrigatoriamente informar** se todos os arquivos estão dentro dos limites ou se algum arquivo ultrapassou o teto estipulado e **precisa urgente ser modularizado/refatorado**.
-3. **Formato do Relatório de Limites:**
+2. **Alerta Explícito ao Usuário (Apenas Arquivos que Precisam de Refatoração):**
+   - **PROIBIDO listar arquivos que estão dentro do limite:** Se o arquivo estiver dentro do limite, **NÃO liste** e **NÃO polua a resposta** com itens `[DENTRO DO LIMITE]`.
+   - **Se todos os arquivos estiverem dentro do limite:** Não mostre lista alguma. Apenas confirme que todos os códigos estão em conformidade (ou omita se tudo estiver normal).
+   - **Se algum arquivo ultrapassar o limite:** Liste **EXCLUSIVAMENTE** os arquivos que ultrapassaram o teto estipulado e que **precisam ser refatorados/modularizados**.
+3. **Formato do Relatório de Limites (Apenas para Arquivos que Excederam o Limite):**
 ```markdown
-> 📏 **Auditoria de Limites de Código:**
-> - [Nome do Arquivo]: [Nº de Linhas] linhas (Limite: [X] linhas) - [DENTRO DO LIMITE / 🚨 EXCEDEU LIMITE - URGENTE REFATORAR]
+> 📏 **Auditoria de Limites de Código (Arquivos que precisam ser refatorados):**
+> - [Nome do Arquivo]: [Nº de Linhas] linhas (Limite: [X] linhas) - 🚨 EXCEDEU LIMITE - URGENTE REFATORAR
 ```
 4. **Procedimento ao Ultrapassar o Limite:**
-   - Se qualquer arquivo exceder o limite (ex: `App.css` acima de 500 linhas), você **DEVE alertar com destaque de urgência** e perguntar se o usuário deseja realizar a quebra/modularização imediata (ex: dividir CSS em arquivos por componente/módulo na pasta `styles/`).
+   - Se qualquer arquivo exceder o limite (ex: folha de estilo ou componente acima de 500 linhas), você **DEVE alertar com destaque de urgência** listando apenas ele e perguntar se o usuário deseja realizar a quebra/modularização imediata.
    - Não faça refatorações arquiteturais invasivas de quebra sem a confirmação prévia do usuário.
 
-Isso evita a criação de arquivos monolíticos ("God Files"), assegura testes rápidos e mantém a arquitetura limpa e escalável.
+Isso evita a criação de arquivos monolíticos ("God Files"), assegura respostas limpas e objetivas, e mantém a arquitetura limpa e escalável.

@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, X, Plus, Edit2, Trash2, Check, DollarSign } from 'lucide-react';
+import { Sparkles, X, Plus, Edit2, Trash2 } from 'lucide-react';
 import {
   fetchProductOrderBumpsApi,
   createProductOrderBumpApi,
   updateProductOrderBumpApi,
   deleteProductOrderBumpApi,
+  fetchProductsApi,
+  fetchProductOffersApi,
 } from './productApi';
+import ConfirmDeleteBumpModal from './ConfirmDeleteBumpModal';
+import ProductOrderBumpForm from './ProductOrderBumpForm';
 
 export function ProductOrderBumpsModal({
   product,
@@ -14,12 +18,17 @@ export function ProductOrderBumpsModal({
   showFeedback,
 }) {
   const [bumps, setBumps] = useState([]);
+  const [catalogProducts, setCatalogProducts] = useState([]);
+  const [availableOffers, setAvailableOffers] = useState([]);
+  const [loadingOffers, setLoadingOffers] = useState(false);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingBumpId, setEditingBumpId] = useState(null);
 
   const [formData, setFormData] = useState({
+    bump_product_id: '',
+    bump_offer_id: '',
     title: '',
     description: '',
     price_brl: '',
@@ -31,6 +40,7 @@ export function ProductOrderBumpsModal({
   useEffect(() => {
     if (!isOpen || !product) return;
     loadBumps();
+    loadCatalogProducts();
   }, [isOpen, product]);
 
   const loadBumps = async () => {
@@ -45,12 +55,25 @@ export function ProductOrderBumpsModal({
     }
   };
 
+  const loadCatalogProducts = async () => {
+    try {
+      const data = await fetchProductsApi();
+      const filtered = Array.isArray(data) ? data.filter((p) => p.id !== product.id) : [];
+      setCatalogProducts(filtered);
+    } catch (err) {
+      console.error('Erro ao carregar catálogo para bumps:', err);
+    }
+  };
+
   if (!isOpen || !product) return null;
 
   const handleStartAdd = () => {
     setIsEditing(true);
     setEditingBumpId(null);
+    setAvailableOffers([]);
     setFormData({
+      bump_product_id: '',
+      bump_offer_id: '',
       title: '',
       description: '',
       price_brl: '',
@@ -58,15 +81,91 @@ export function ProductOrderBumpsModal({
     });
   };
 
-  const handleStartEdit = (bump) => {
+  const handleStartEdit = async (bump) => {
     setIsEditing(true);
     setEditingBumpId(bump.id);
     setFormData({
+      bump_product_id: bump.bump_product_id ? String(bump.bump_product_id) : '',
+      bump_offer_id: bump.bump_offer_id ? String(bump.bump_offer_id) : '',
       title: bump.title,
       description: bump.description || '',
       price_brl: String(bump.price_brl),
       is_active: bump.is_active,
     });
+
+    if (bump.bump_product_id) {
+      try {
+        setLoadingOffers(true);
+        const offers = await fetchProductOffersApi(bump.bump_product_id);
+        setAvailableOffers(offers || []);
+      } catch (err) {
+        console.error('Erro ao carregar ofertas do bump:', err);
+      } finally {
+        setLoadingOffers(false);
+      }
+    } else {
+      setAvailableOffers([]);
+    }
+  };
+
+  const handleProductChange = async (selectedProdId) => {
+    if (!selectedProdId) {
+      setFormData((prev) => ({
+        ...prev,
+        bump_product_id: '',
+        bump_offer_id: '',
+      }));
+      setAvailableOffers([]);
+      return;
+    }
+
+    const prod = catalogProducts.find((p) => String(p.id) === String(selectedProdId));
+    if (!prod) return;
+
+    try {
+      setLoadingOffers(true);
+      const offers = await fetchProductOffersApi(prod.id);
+      setAvailableOffers(offers || []);
+
+      let selectedOfferId = '';
+      let initialPrice = prod.price_brl;
+
+      if (offers && offers.length > 0) {
+        const defaultOffer = offers.find((o) => o.is_default) || offers[0];
+        selectedOfferId = String(defaultOffer.id);
+        initialPrice = defaultOffer.price_brl;
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        bump_product_id: String(prod.id),
+        bump_offer_id: selectedOfferId,
+        title: prod.name,
+        price_brl: String(initialPrice),
+      }));
+    } catch (err) {
+      console.error('Erro ao carregar ofertas:', err);
+      setFormData((prev) => ({
+        ...prev,
+        bump_product_id: String(prod.id),
+        bump_offer_id: '',
+        title: prod.name,
+        price_brl: String(prod.price_brl),
+      }));
+    } finally {
+      setLoadingOffers(false);
+    }
+  };
+
+  const handleOfferChange = (selectedOfferId) => {
+    const offer = availableOffers.find((o) => String(o.id) === String(selectedOfferId));
+    if (offer) {
+      setFormData((prev) => ({
+        ...prev,
+        bump_offer_id: String(offer.id),
+        price_brl: String(offer.price_brl),
+      }));
+    }
   };
 
   const handleCancelForm = () => {
@@ -93,6 +192,8 @@ export function ProductOrderBumpsModal({
         description: formData.description.trim() || null,
         price_brl: price,
         is_active: formData.is_active,
+        bump_product_id: formData.bump_product_id ? parseInt(formData.bump_product_id, 10) : null,
+        bump_offer_id: formData.bump_offer_id ? parseInt(formData.bump_offer_id, 10) : null,
       };
 
       if (editingBumpId) {
@@ -184,96 +285,21 @@ export function ProductOrderBumpsModal({
             )}
           </div>
 
-          {/* Formulário de Criação/Edição */}
+          {/* Formulário Modularizado de Criação/Edição */}
           {isEditing && (
-            <form onSubmit={handleSaveForm} style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
-              <h4 style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a', marginBottom: '12px' }}>
-                {editingBumpId ? 'Editar Order Bump' : 'Adicionar Novo Order Bump'}
-              </h4>
-
-              <div style={{ marginBottom: '12px' }}>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                  Título da Chamada (Ex: Leve também o Guia Prático em PDF) *
-                </label>
-                <input
-                  type="text"
-                  className="form-control-modern"
-                  value={formData.title}
-                  onChange={(e) => setFormData((p) => ({ ...p, title: e.target.value }))}
-                  placeholder="Ex: Leve também o Checklist Exclusivo"
-                  data-testid="input-bump-title"
-                  style={{ width: '100%', fontSize: '13px' }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                    Preço Adicional em R$ (BRL) *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    className="form-control-modern"
-                    value={formData.price_brl}
-                    onChange={(e) => setFormData((p) => ({ ...p, price_brl: e.target.value }))}
-                    placeholder="27.00"
-                    data-testid="input-bump-price"
-                    style={{ width: '100%', fontSize: '13px' }}
-                  />
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', paddingTop: '22px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 600, color: '#0f172a' }}>
-                    <input
-                      type="checkbox"
-                      checked={formData.is_active}
-                      onChange={(e) => setFormData((p) => ({ ...p, is_active: e.target.checked }))}
-                      data-testid="toggle-bump-active"
-                      style={{ width: '16px', height: '16px', accentColor: '#059669', cursor: 'pointer' }}
-                    />
-                    <span>Ativo no Checkout</span>
-                  </label>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: '14px' }}>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
-                  Descrição Curta e Persuasiva
-                </label>
-                <textarea
-                  className="form-control-modern"
-                  rows={2}
-                  value={formData.description}
-                  onChange={(e) => setFormData((p) => ({ ...p, description: e.target.value }))}
-                  placeholder="Explique o benefício imediato em poucas palavras..."
-                  data-testid="input-bump-description"
-                  style={{ width: '100%', fontSize: '12.5px', resize: 'vertical' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-                <button
-                  type="button"
-                  className="webhooks-btn-secondary"
-                  onClick={handleCancelForm}
-                  disabled={actionLoading}
-                  style={{ padding: '5px 12px', fontSize: '12px' }}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="webhooks-btn-primary"
-                  style={{ backgroundColor: '#059669', borderColor: '#047857', padding: '5px 14px', fontSize: '12px' }}
-                  disabled={actionLoading}
-                  data-testid="btn-save-order-bump"
-                >
-                  <Check size={13} />
-                  <span>{actionLoading ? 'Salvando...' : 'Salvar Bump'}</span>
-                </button>
-              </div>
-            </form>
+            <ProductOrderBumpForm
+              editingBumpId={editingBumpId}
+              formData={formData}
+              setFormData={setFormData}
+              catalogProducts={catalogProducts}
+              availableOffers={availableOffers}
+              loadingOffers={loadingOffers}
+              actionLoading={actionLoading}
+              onProductChange={handleProductChange}
+              onOfferChange={handleOfferChange}
+              onSave={handleSaveForm}
+              onCancel={handleCancelForm}
+            />
           )}
 
           {/* Listagem de Bumps */}
@@ -306,11 +332,16 @@ export function ProductOrderBumpsModal({
                   }}
                 >
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>{b.title}</span>
                       <span style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '4px', fontWeight: 600, backgroundColor: b.is_active ? '#ecfdf5' : '#f1f5f9', color: b.is_active ? '#059669' : '#64748b' }}>
                         {b.is_active ? 'Ativo' : 'Inativo'}
                       </span>
+                      {b.bump_product_name && (
+                        <span style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '4px', fontWeight: 600, backgroundColor: '#e0f2fe', color: '#0369a1' }}>
+                          Produto: {b.bump_product_name} {b.bump_offer_name ? `(${b.bump_offer_name})` : ''}
+                        </span>
+                      )}
                     </div>
                     {b.description && (
                       <p style={{ fontSize: '12px', color: '#64748b', marginTop: '2px', lineHeight: 1.3 }}>{b.description}</p>
@@ -360,51 +391,17 @@ export function ProductOrderBumpsModal({
           </div>
         </div>
 
-        {/* Modal de confirmação de exclusão */}
-        {deleteConfirm.isOpen && deleteConfirm.bump && (
-          <div
-            className="webhooks-confirm-overlay"
-            data-testid="delete-bump-confirm-overlay"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div
-              className="webhooks-confirm-dialog"
-              role="dialog"
-              aria-modal="true"
-              data-testid="delete-bump-confirm-content"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="webhooks-confirm-icon-box delete">
-                <Trash2 size={24} />
-              </div>
-              <h3 className="webhooks-confirm-title">Excluir Order Bump?</h3>
-              <p className="webhooks-confirm-message">
-                Deseja realmente remover o bump <strong>"{deleteConfirm.bump.title}"</strong>?
-              </p>
-              <div className="webhooks-confirm-actions">
-                <button
-                  type="button"
-                  className="webhooks-btn-secondary"
-                  onClick={() => setDeleteConfirm({ isOpen: false, bump: null })}
-                  disabled={actionLoading}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  className="webhooks-confirm-primary-btn"
-                  style={{ backgroundColor: '#dc2626', borderColor: '#b91c1c' }}
-                  onClick={handleExecuteDelete}
-                  disabled={actionLoading}
-                  data-testid="confirm-delete-bump-btn"
-                >
-                  <span>{actionLoading ? 'Excluindo...' : 'Sim, Excluir'}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Modal de confirmação de exclusão extraído */}
+        <ConfirmDeleteBumpModal
+          isOpen={deleteConfirm.isOpen}
+          bump={deleteConfirm.bump}
+          onClose={() => setDeleteConfirm({ isOpen: false, bump: null })}
+          onConfirm={handleExecuteDelete}
+          loading={actionLoading}
+        />
       </div>
     </div>
   );
 }
+
+export default ProductOrderBumpsModal;

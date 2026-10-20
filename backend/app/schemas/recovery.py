@@ -18,6 +18,8 @@ class CheckoutLeadCaptureRequest(BaseModel):
     utm_content: Optional[str] = None
     utm_term: Optional[str] = None
     src: Optional[str] = None
+    ab_test_id: Optional[int] = None
+    ab_test_variant: Optional[str] = None
 
 
 class CheckoutLeadCaptureResponse(BaseModel):
@@ -25,6 +27,19 @@ class CheckoutLeadCaptureResponse(BaseModel):
     recovery_token: str
     status: str
     message: str
+
+
+class CartByTokenResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    customer_name: Optional[str] = None
+    customer_email: Optional[str] = None
+    customer_phone: Optional[str] = None
+    customer_phone_ddi: Optional[str] = "55"
+    customer_cpf: Optional[str] = None
+    coupon_code: Optional[str] = None
+    product_slug: Optional[str] = None
+    offer_slug: Optional[str] = None
 
 
 class AbandonedCartResponse(BaseModel):
@@ -100,3 +115,12 @@ class RecoveryStatsResponse(BaseModel):
     total_pix_paid: int
     pix_conversion_rate: float
     total_pix_pending_amount_brl: float
+
+
+class BulkDeleteAbandonedCartsRequest(BaseModel):
+    cart_ids: List[int] = Field(..., min_length=1, description="Lista de IDs de carrinhos para exclusão")
+
+
+class BulkDeleteAbandonedCartsResponse(BaseModel):
+    deleted_count: int
+    message: str

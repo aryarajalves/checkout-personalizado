@@ -311,3 +311,41 @@ def test_checkout_captures_utm_parameters():
     assert order.src == "link_bio"
     assert order.sck == "chk_01"
     db2.close()
+
+
+def test_delete_order_and_bulk_delete_api():
+    headers = get_auth_headers()
+    db = TestingSessionLocal()
+    product, orders = create_sample_orders(db)
+    order_id_1 = orders[0].id
+    order_id_2 = orders[1].id
+    order_id_3 = orders[2].id
+    db.close()
+
+    # 1. Deleção individual com sucesso
+    res_delete = client.delete(f"/api/v1/sales/orders/{order_id_1}", headers=headers)
+    assert res_delete.status_code == 200
+    assert res_delete.json()["success"] is True
+
+    # Verificar que o pedido foi removido
+    db2 = TestingSessionLocal()
+    assert db2.query(Order).filter(Order.id == order_id_1).first() is None
+    db2.close()
+
+    # 2. Deletar pedido inexistente retorna 404
+    res_404 = client.delete(f"/api/v1/sales/orders/{order_id_1}", headers=headers)
+    assert res_404.status_code == 404
+
+    # 3. Deleção em massa com sucesso
+    res_bulk = client.post(
+        "/api/v1/sales/orders/bulk-delete",
+        json={"order_ids": [order_id_2, order_id_3]},
+        headers=headers
+    )
+    assert res_bulk.status_code == 200
+    assert res_bulk.json()["deleted_count"] == 2
+
+    # Verificar que ambos foram removidos
+    db3 = TestingSessionLocal()
+    assert db3.query(Order).filter(Order.id.in_([order_id_2, order_id_3])).count() == 0
+    db3.close()

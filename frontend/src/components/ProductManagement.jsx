@@ -12,7 +12,11 @@ import {
   ProductOrderBumpsModal,
   ProductUpsellModal,
   ProductAppearanceModal,
+  ProductConversionModal,
+  ProductDomainModal,
+  ProductABTestModal,
 } from './product-management';
+import { useToast } from '../context/ToastContext';
 
 export default function ProductManagement({ currentUser }) {
   const {
@@ -64,11 +68,29 @@ export default function ProductManagement({ currentUser }) {
   const [isAppearanceModalOpen, setIsAppearanceModalOpen] = useState(false);
   const [selectedAppearanceProduct, setSelectedAppearanceProduct] = useState(null);
 
+  const [isDomainModalOpen, setIsDomainModalOpen] = useState(false);
+  const [selectedDomainProduct, setSelectedDomainProduct] = useState(null);
+
+  const [isConversionModalOpen, setIsConversionModalOpen] = useState(false);
+  const [selectedConversionProduct, setSelectedConversionProduct] = useState(null);
+
+  const [isABTestModalOpen, setIsABTestModalOpen] = useState(false);
+  const [selectedABTestProduct, setSelectedABTestProduct] = useState(null);
+
+  const toastContext = useToast();
   const [toastFeedback, setToastFeedback] = useState(null);
 
   const showFeedback = (type, message) => {
-    setToastFeedback({ type, message });
-    setTimeout(() => setToastFeedback(null), 4000);
+    const isFirstArgType = typeof type === 'string' && ['success', 'error', 'info', 'warning'].includes(type);
+    const toastType = isFirstArgType ? type : (message || 'success');
+    const msg = isFirstArgType ? message : type;
+
+    if (toastContext && typeof toastContext.addToast === 'function') {
+      toastContext.addToast(msg, toastType);
+    } else {
+      setToastFeedback({ type: toastType, message: msg });
+      setTimeout(() => setToastFeedback(null), 4000);
+    }
   };
 
   const handleOpenWebhooks = (product) => {
@@ -94,6 +116,21 @@ export default function ProductManagement({ currentUser }) {
   const handleOpenAppearance = (product) => {
     setSelectedAppearanceProduct(product);
     setIsAppearanceModalOpen(true);
+  };
+
+  const handleOpenDomain = (product) => {
+    setSelectedDomainProduct(product);
+    setIsDomainModalOpen(true);
+  };
+
+  const handleOpenConversion = (product) => {
+    setSelectedConversionProduct(product);
+    setIsConversionModalOpen(true);
+  };
+
+  const handleOpenABTest = (product) => {
+    setSelectedABTestProduct(product);
+    setIsABTestModalOpen(true);
   };
 
   const filteredProducts = useMemo(() => {
@@ -170,26 +207,30 @@ export default function ProductManagement({ currentUser }) {
         onManageOrderBumps={handleOpenOrderBumps}
         onManageUpsell={handleOpenUpsell}
         onManageAppearance={handleOpenAppearance}
+        onManageConversion={handleOpenConversion}
+        onManageDomain={handleOpenDomain}
+        onManageABTest={handleOpenABTest}
         onDelete={handleOpenDelete}
         onNewProduct={handleOpenCreate}
       />
 
-      {/* Notificação Toast */}
+      {/* Notificação Toast Fallback (caso fora do ToastProvider) */}
       {toastFeedback && (
         <div
           data-testid="funnel-toast-feedback"
           style={{
             position: 'fixed',
-            bottom: '24px',
+            top: '24px',
             right: '24px',
-            zIndex: 9999,
+            zIndex: 999999,
             padding: '12px 20px',
             borderRadius: '8px',
             background: toastFeedback.type === 'error' ? '#ef4444' : '#10b981',
             color: '#ffffff',
-            boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.25)',
             fontWeight: 600,
             fontSize: '14px',
+            pointerEvents: 'auto',
           }}
         >
           {toastFeedback.message}
@@ -264,6 +305,39 @@ export default function ProductManagement({ currentUser }) {
         product={selectedAppearanceProduct}
         onClose={() => {
           setIsAppearanceModalOpen(false);
+          refreshProducts();
+        }}
+        showFeedback={showFeedback}
+      />
+
+      {/* Modal de Domínio Próprio (CNAME Whitelabel) */}
+      <ProductDomainModal
+        isOpen={isDomainModalOpen}
+        product={selectedDomainProduct}
+        onClose={() => {
+          setIsDomainModalOpen(false);
+          refreshProducts();
+        }}
+        showFeedback={showFeedback}
+      />
+
+      {/* Modal de Gatilhos de Conversão (Exit-Intent e Prova Social) */}
+      <ProductConversionModal
+        isOpen={isConversionModalOpen}
+        product={selectedConversionProduct}
+        onClose={() => {
+          setIsConversionModalOpen(false);
+          refreshProducts();
+        }}
+        showFeedback={showFeedback}
+      />
+
+      {/* Modal de Teste A/B de Checkout e Ofertas */}
+      <ProductABTestModal
+        isOpen={isABTestModalOpen}
+        product={selectedABTestProduct}
+        onClose={() => {
+          setIsABTestModalOpen(false);
           refreshProducts();
         }}
         showFeedback={showFeedback}

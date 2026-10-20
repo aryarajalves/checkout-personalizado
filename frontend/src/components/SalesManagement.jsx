@@ -9,6 +9,8 @@ import {
   Share2,
   Tag,
   Users,
+  RotateCcw,
+  Handshake,
 } from 'lucide-react';
 import {
   fetchSalesMetricsApi,
@@ -16,15 +18,27 @@ import {
   fetchUtmBiAnalyticsApi,
   fetchOrderDetailsApi,
   downloadOrdersCsvApi,
+  deleteOrderApi,
+  bulkDeleteOrdersApi,
 } from './sales/salesApi';
 import SalesOverviewTab from './sales/SalesOverviewTab';
 import OrdersReportTab from './sales/OrdersReportTab';
 import UtmAnalyticsTab from './sales/UtmAnalyticsTab';
+import OrderDetailsModal from './sales/OrderDetailsModal';
+import RefundModal from './sales/RefundModal';
+import RecoveryManagement from './RecoveryManagement';
+import ProposalManagement from './ProposalManagement';
 import { useToast } from '../context/ToastContext';
 import '../styles/sales.css';
 
-export default function SalesManagement({ currentUser }) {
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'orders' | 'utm_bi'
+export default function SalesManagement({ currentUser, initialTab = 'overview' }) {
+  const [activeTab, setActiveTab] = useState(initialTab || 'overview'); // 'overview' | 'orders' | 'utm_bi' | 'recovery' | 'proposals'
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
   const [metrics, setMetrics] = useState({});
   const [orders, setOrders] = useState([]);
   const [utmBi, setUtmBi] = useState({});
@@ -33,14 +47,17 @@ export default function SalesManagement({ currentUser }) {
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [loadingUtm, setLoadingUtm] = useState(false);
 
-  // Filters for orders report
+  // Paginação e filtros do relatório de pedidos
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [methodFilter, setMethodFilter] = useState('');
 
-  // Order Details Modal
+  // Order Details Modal & Refund Target
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [refundOrderTarget, setRefundOrderTarget] = useState(null);
 
   const { addToast } = useToast();
 
@@ -56,21 +73,70 @@ export default function SalesManagement({ currentUser }) {
     }
   }, []);
 
-  const loadOrders = useCallback(async () => {
+  const loadOrders = useCallback(async (page = 1) => {
     try {
       setLoadingOrders(true);
       const data = await fetchOrdersReportApi({
         search: searchTerm,
         status: statusFilter,
         paymentMethod: methodFilter,
+        limit: 20,
+        offset: (page - 1) * 20,
       });
-      setOrders(data || []);
+      const orderList = Array.isArray(data) ? data : (data.items || []);
+      const totalCount = Array.isArray(data) ? data.length : (data.total ?? orderList.length);
+      setOrders(orderList);
+      setTotalOrders(totalCount);
     } catch (err) {
       addToast(err.message || 'Erro ao carregar pedidos.', 'error');
     } finally {
       setLoadingOrders(false);
     }
   }, [searchTerm, statusFilter, methodFilter, addToast]);
+
+  const handleSearchChange = (val) => {
+    setSearchTerm(val);
+    setCurrentPage(1);
+  };
+
+  const handleStatusFilterChange = (val) => {
+    setStatusFilter(val);
+    setCurrentPage(1);
+  };
+
+  const handleMethodFilterChange = (val) => {
+    setMethodFilter(val);
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+    loadOrders(newPage);
+  };
+
+  const handleDeleteOrder = async (orderId) => {
+    try {
+      await deleteOrderApi(orderId);
+      addToast('Pedido excluído com sucesso.', 'success');
+      loadOrders(currentPage);
+      loadMetrics();
+    } catch (err) {
+      addToast(err.message || 'Erro ao excluir pedido.', 'error');
+      throw err;
+    }
+  };
+
+  const handleBulkDeleteOrders = async (orderIds) => {
+    try {
+      const res = await bulkDeleteOrdersApi(orderIds);
+      addToast(`${res.deleted_count || orderIds.length} pedidos excluídos com sucesso.`, 'success');
+      loadOrders(currentPage);
+      loadMetrics();
+    } catch (err) {
+      addToast(err.message || 'Erro ao excluir pedidos em lote.', 'error');
+      throw err;
+    }
+  };
 
   const loadUtmBi = useCallback(async () => {
     try {
@@ -92,11 +158,11 @@ export default function SalesManagement({ currentUser }) {
     if (activeTab === 'overview') {
       loadMetrics();
     } else if (activeTab === 'orders') {
-      loadOrders();
+      loadOrders(currentPage);
     } else if (activeTab === 'utm_bi') {
       loadUtmBi();
     }
-  }, [activeTab, loadMetrics, loadOrders, loadUtmBi]);
+  }, [activeTab, loadMetrics, loadOrders, loadUtmBi, currentPage]);
 
   const handleExportCsv = async () => {
     try {
@@ -121,6 +187,20 @@ export default function SalesManagement({ currentUser }) {
     } finally {
       setLoadingDetails(false);
     }
+  };
+
+  const handleOpenRefund = (order) => {
+    setRefundOrderTarget(order);
+  };
+
+  const handleRefundSuccess = (updatedOrder) => {
+    setOrders((prev) =>
+      prev.map((o) => (o.id === updatedOrder.id ? { ...o, ...updatedOrder } : o))
+    );
+    if (selectedOrderDetails && selectedOrderDetails.id === updatedOrder.id) {
+      setSelectedOrderDetails((prev) => ({ ...prev, ...updatedOrder }));
+    }
+    loadMetrics();
   };
 
   return (
@@ -166,6 +246,26 @@ export default function SalesManagement({ currentUser }) {
           <Target size={16} />
           BI de Tráfego & UTMs
         </button>
+
+        <button
+          type="button"
+          className={`sales-tab-btn ${activeTab === 'recovery' ? 'active' : ''}`}
+          onClick={() => setActiveTab('recovery')}
+          data-testid="tab-sales-recovery"
+        >
+          <RotateCcw size={16} />
+          Recuperação de Vendas
+        </button>
+
+        <button
+          type="button"
+          className={`sales-tab-btn ${activeTab === 'proposals' ? 'active' : ''}`}
+          onClick={() => setActiveTab('proposals')}
+          data-testid="tab-sales-proposals"
+        >
+          <Handshake size={16} />
+          Propostas High-Ticket
+        </button>
       </div>
 
       {/* Tabs Content */}
@@ -176,15 +276,22 @@ export default function SalesManagement({ currentUser }) {
       {activeTab === 'orders' && (
         <OrdersReportTab
           orders={orders}
+          totalOrders={totalOrders}
+          currentPage={currentPage}
+          pageSize={20}
+          onPageChange={handlePageChange}
           loading={loadingOrders}
           searchTerm={searchTerm}
-          onSearchChange={setSearchTerm}
+          onSearchChange={handleSearchChange}
           statusFilter={statusFilter}
-          onStatusFilterChange={setStatusFilter}
+          onStatusFilterChange={handleStatusFilterChange}
           methodFilter={methodFilter}
-          onMethodFilterChange={setMethodFilter}
+          onMethodFilterChange={handleMethodFilterChange}
           onExportCsv={handleExportCsv}
           onViewDetails={handleOpenDetails}
+          onOpenRefund={handleOpenRefund}
+          onDeleteOrder={handleDeleteOrder}
+          onBulkDeleteOrders={handleBulkDeleteOrders}
         />
       )}
 
@@ -192,129 +299,28 @@ export default function SalesManagement({ currentUser }) {
         <UtmAnalyticsTab utmBi={utmBi} loading={loadingUtm} />
       )}
 
-      {/* Modal de Detalhes do Pedido */}
-      {selectedOrderDetails && (
-        <div className="sales-modal-backdrop" data-testid="order-details-modal">
-          <div className="sales-modal-panel">
-            <div className="sales-modal-header">
-              <h2 className="sales-modal-title">Pedido {selectedOrderDetails.order_code}</h2>
-              <button
-                type="button"
-                className="sales-modal-close-btn"
-                onClick={() => setSelectedOrderDetails(null)}
-                data-testid="close-order-details-btn"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="sales-modal-body">
-              {/* Detalhes Gerais */}
-              <div className="sales-detail-grid">
-                <div className="sales-detail-item">
-                  <span className="sales-detail-label">Cliente</span>
-                  <span className="sales-detail-val">{selectedOrderDetails.customer_name}</span>
-                  <span style={{ fontSize: '12px', color: '#64748b' }}>
-                    {selectedOrderDetails.customer_email} • +{selectedOrderDetails.customer_phone_ddi} {selectedOrderDetails.customer_phone}
-                  </span>
-                </div>
-
-                <div className="sales-detail-item">
-                  <span className="sales-detail-label">Status & Método</span>
-                  <span className="sales-detail-val" style={{ textTransform: 'capitalize' }}>
-                    {selectedOrderDetails.status} ({selectedOrderDetails.payment_method})
-                  </span>
-                  <span style={{ fontSize: '12px', color: '#64748b' }}>
-                    Gateway: {selectedOrderDetails.gateway_name}
-                  </span>
-                </div>
-
-                <div className="sales-detail-item">
-                  <span className="sales-detail-label">Produto & Oferta</span>
-                  <span className="sales-detail-val">{selectedOrderDetails.product_name}</span>
-                  <span style={{ fontSize: '12px', color: '#64748b' }}>
-                    {selectedOrderDetails.offer_name || 'Oferta Padrão'}
-                  </span>
-                </div>
-
-                <div className="sales-detail-item">
-                  <span className="sales-detail-label">Valor Total</span>
-                  <span className="sales-detail-val" style={{ color: '#059669', fontSize: '16px' }}>
-                    R$ {selectedOrderDetails.amount_brl?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
-                  {selectedOrderDetails.discount_amount_brl > 0 && (
-                    <span style={{ fontSize: '12px', color: '#dc2626' }}>
-                      Desconto cupom ({selectedOrderDetails.coupon_code}): - R$ {selectedOrderDetails.discount_amount_brl?.toFixed(2)}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Rastreamento de Tráfego / UTMs */}
-              <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#0f172a', marginBottom: '10px' }}>
-                Origem do Tráfego & UTMs
-              </h3>
-              <div className="sales-detail-grid" style={{ marginBottom: '20px' }}>
-                <div className="sales-detail-item">
-                  <span className="sales-detail-label">UTM Source</span>
-                  <span className="sales-detail-val">{selectedOrderDetails.utm_source || '— (direto)'}</span>
-                </div>
-                <div className="sales-detail-item">
-                  <span className="sales-detail-label">UTM Campaign</span>
-                  <span className="sales-detail-val">{selectedOrderDetails.utm_campaign || '—'}</span>
-                </div>
-                <div className="sales-detail-item">
-                  <span className="sales-detail-label">UTM Medium</span>
-                  <span className="sales-detail-val">{selectedOrderDetails.utm_medium || '—'}</span>
-                </div>
-                <div className="sales-detail-item">
-                  <span className="sales-detail-label">Parâmetro SRC</span>
-                  <span className="sales-detail-val">{selectedOrderDetails.src || '—'}</span>
-                </div>
-              </div>
-
-              {/* Divisão de Pagamento / Splits */}
-              {selectedOrderDetails.splits && selectedOrderDetails.splits.length > 0 && (
-                <>
-                  <h3 style={{ fontSize: '15px', fontWeight: 600, color: '#0f172a', marginBottom: '10px' }}>
-                    Split de Pagamento Entre Sócios
-                  </h3>
-                  <div className="sales-table-wrapper" style={{ marginBottom: '0' }}>
-                    <table className="sales-table">
-                      <thead>
-                        <tr>
-                          <th>Sócio / Recebedor</th>
-                          <th>Percentual</th>
-                          <th>Valor Repassado</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {selectedOrderDetails.splits.map((s, idx) => (
-                          <tr key={idx}>
-                            <td><strong>{s.recipient_name}</strong></td>
-                            <td>{s.percentage}%</td>
-                            <td>R$ {s.amount_brl?.toFixed(2)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
-              )}
-            </div>
-
-            <div className="sales-modal-footer">
-              <button
-                type="button"
-                className="sales-btn-close"
-                onClick={() => setSelectedOrderDetails(null)}
-              >
-                Fechar
-              </button>
-            </div>
-          </div>
-        </div>
+      {activeTab === 'recovery' && (
+        <RecoveryManagement currentUser={currentUser} />
       )}
+
+      {activeTab === 'proposals' && (
+        <ProposalManagement currentUser={currentUser} />
+      )}
+
+      {/* Modal de Detalhes do Pedido */}
+      <OrderDetailsModal
+        order={selectedOrderDetails}
+        onClose={() => setSelectedOrderDetails(null)}
+        onOpenRefund={handleOpenRefund}
+      />
+
+      {/* Modal de Confirmação e Registro de Motivo de Reembolso */}
+      <RefundModal
+        isOpen={!!refundOrderTarget}
+        order={refundOrderTarget}
+        onClose={() => setRefundOrderTarget(null)}
+        onRefundSuccess={handleRefundSuccess}
+      />
     </div>
   );
 }

@@ -1,18 +1,18 @@
-name: projeto-base
+name: checkout
 
 services:
   db:
     image: postgres:16-alpine
-    container_name: projeto_base_db
+    container_name: checkout_db
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgrespassword
       POSTGRES_DB: projetobase
     ports:
-      - "5436:5432"
+      - "5438:5432"
     volumes:
-      - projeto_base_pg_data:/var/lib/postgresql/data
+      - checkout_pg_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -23,7 +23,7 @@ services:
     build:
       context: ../backend
       dockerfile: Dockerfile
-    container_name: projeto_base_backend
+    container_name: checkout_backend
     restart: unless-stopped
     depends_on:
       db:
@@ -40,12 +40,16 @@ services:
     build:
       context: ../frontend
       dockerfile: Dockerfile
-    container_name: projeto_base_frontend
+    container_name: checkout_frontend
     restart: unless-stopped
     depends_on:
       - backend
     ports:
-      - "3001:80"
+      - "3003:80"
+    volumes:
+      - ../frontend/dist:/usr/share/nginx/html:ro
 
 volumes:
-  projeto_base_pg_data:
+  checkout_pg_data:
+    external: true
+    name: projeto-base_projeto_base_pg_data

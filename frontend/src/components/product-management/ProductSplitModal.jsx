@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Share2, Plus, Trash2, X, Check, AlertCircle, AlertTriangle, Calendar } from 'lucide-react';
+import { Share2, Plus, Trash2, X, Check, AlertCircle, AlertTriangle, Calendar, Calculator } from 'lucide-react';
+import ProductSplitSimulatorModal from './ProductSplitSimulatorModal';
 
 export default function ProductSplitModal({
   isOpen,
@@ -11,6 +12,7 @@ export default function ProductSplitModal({
 }) {
   const [rules, setRules] = useState([]);
   const [duplicateError, setDuplicateError] = useState('');
+  const [isSimulatorOpen, setIsSimulatorOpen] = useState(false);
 
   useEffect(() => {
     if (product && product.split_rules) {
@@ -188,6 +190,30 @@ export default function ProductSplitModal({
                 : '100% do valor da venda está distribuído.'}
             </span>
           </div>
+
+          <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              onClick={() => setIsSimulatorOpen(true)}
+              data-testid="btn-open-simulator-from-split"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                backgroundColor: '#eff6ff',
+                color: '#0284c7',
+                border: '1px solid #bfdbfe',
+                borderRadius: '8px',
+                padding: '6px 12px',
+                fontSize: '12px',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              <Calculator size={14} />
+              <span>Ver Simulador de Lucro Líquido & Parcelas</span>
+            </button>
+          </div>
         </div>
 
         {/* Alerta de Duplicidade */}
@@ -273,7 +299,7 @@ export default function ProductSplitModal({
                                 value={rec.id}
                                 disabled={isSelectedInOtherRow}
                               >
-                                {rec.name} {rec.document ? `(${rec.document})` : ''} {isSelectedInOtherRow ? '— (Já adicionado)' : ''}
+                                {rec.name} {rec.document ? `(${rec.document})` : ''} {rec.pix_key ? '— ✓ Pix OK' : '— ⚠️ Sem Pix'} {isSelectedInOtherRow ? '(Já adicionado)' : ''}
                               </option>
                             );
                           })}
@@ -413,6 +439,12 @@ export default function ProductSplitModal({
           </form>
         )}
       </div>
+
+      <ProductSplitSimulatorModal
+        isOpen={isSimulatorOpen}
+        product={product}
+        onClose={() => setIsSimulatorOpen(false)}
+      />
     </div>
   );
 }

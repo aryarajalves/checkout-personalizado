@@ -2,7 +2,7 @@ import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "Projeto Base"
+    PROJECT_NAME: str = "Checkout Jords"
     API_V1_STR: str = "/api/v1"
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./app.db")
 
@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     # Brevo Email API
     BREVO_API_KEY: str = os.getenv("BREVO_API_KEY", "")
     BREVO_SENDER_EMAIL: str = os.getenv("BREVO_SENDER_EMAIL", "")
-    BREVO_SENDER_NAME: str = os.getenv("BREVO_SENDER_NAME", "Projeto Base")
+    BREVO_SENDER_NAME: str = os.getenv("BREVO_SENDER_NAME", "Checkout Jords")
 
     # Backblaze B2 / AWS S3 Configs para Backup Automático (Suporta tanto B2_* quanto BACKBLAZE_*)
     B2_ENDPOINT_URL: str = os.getenv("BACKBLAZE_ENDPOINT_URL") or os.getenv("B2_ENDPOINT_URL", "")

@@ -1,6 +1,7 @@
 import React from 'react';
 import CheckoutPixPayment from './CheckoutPixPayment';
 import CheckoutCryptoPayment from './CheckoutCryptoPayment';
+import CheckoutAsaasCarnetPayment from './CheckoutAsaasCarnetPayment';
 import CheckoutPostPurchaseAction from './CheckoutPostPurchaseAction';
 import { formatCurrency } from './checkoutUtils';
 
@@ -34,6 +35,25 @@ export default function CheckoutOrderResult({
           postPurchaseTargetUrl={postPurchaseTargetUrl}
           redirectCountdown={redirectCountdown}
           testId={hasActiveUpsell ? "upsell-pix-link" : "thank-you-pix-link"}
+        />
+      </div>
+    );
+  }
+
+  if (createdOrder.payment_method === 'asaas_installments') {
+    return (
+      <div data-testid="checkout-order-result-asaas-carnet">
+        <CheckoutAsaasCarnetPayment
+          order={createdOrder}
+          onBack={onBack}
+          onOrderPaid={onOrderPaid}
+        />
+        <CheckoutPostPurchaseAction
+          createdOrder={createdOrder}
+          hasActiveUpsell={hasActiveUpsell}
+          postPurchaseTargetUrl={postPurchaseTargetUrl}
+          redirectCountdown={redirectCountdown}
+          testId={hasActiveUpsell ? "upsell-asaas-link" : "thank-you-asaas-link"}
         />
       </div>
     );

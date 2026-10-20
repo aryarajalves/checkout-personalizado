@@ -223,4 +223,131 @@ describe('SalesManagement Component', () => {
       expect(salesApi.downloadOrdersCsvApi).toHaveBeenCalled();
     });
   });
+
+  it('opens refund modal directly from orders report table and completes refund', async () => {
+    vi.spyOn(salesApi, 'refundOrderApi').mockResolvedValue({
+      success: true,
+      message: 'Pedido estornado com sucesso!',
+      order_id: 1,
+      status: 'refunded',
+      refund_reason: 'Arrependimento de compra / Prazo de 7 dias',
+      refunded_at: '2026-10-17T12:00:00Z',
+    });
+
+    renderWithToast(<SalesManagement currentUser={{ role: 'superadmin' }} />);
+
+    fireEvent.click(screen.getByTestId('tab-orders-report'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('refund-order-btn-1')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('refund-order-btn-1'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('refund-order-modal')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('confirm-refund-btn'));
+
+    await waitFor(() => {
+      expect(salesApi.refundOrderApi).toHaveBeenCalledWith(1, {
+        reason: 'Arrependimento de compra / Prazo de 7 dias',
+        notes: '',
+      });
+      expect(screen.queryByTestId('refund-order-modal')).not.toBeInTheDocument();
+    });
+  });
+
+  it('displays refund banner with reason and date when viewing details of refunded order', async () => {
+    vi.spyOn(salesApi, 'fetchOrderDetailsApi').mockResolvedValue({
+      id: 2,
+      order_code: 'ORD-20261016-0002',
+      product_name: 'Mentoria High Ticket',
+      customer_name: 'Carlos Reembolsado',
+      customer_email: 'carlos@reembolsado.com',
+      customer_phone: '11988887777',
+      amount_brl: 500.0,
+      payment_method: 'pix',
+      status: 'refunded',
+      gateway_name: 'pagarme',
+      refund_reason: 'Insatisfação com o conteúdo / produto',
+      refunded_at: '2026-10-17T11:00:00Z',
+      splits: [],
+    });
+
+    renderWithToast(<SalesManagement currentUser={{ role: 'superadmin' }} />);
+
+    fireEvent.click(screen.getByTestId('tab-orders-report'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('view-order-btn-1')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('view-order-btn-1'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('refund-details-banner')).toBeInTheDocument();
+      expect(screen.getByText(/Insatisfação com o conteúdo/i)).toBeInTheDocument();
+    });
+  });
+
+  it('deletes a single order via deleteOrderApi and refreshes orders', async () => {
+    vi.spyOn(salesApi, 'deleteOrderApi').mockResolvedValue({ success: true, message: 'Pedido excluído' });
+
+    renderWithToast(<SalesManagement currentUser={{ role: 'superadmin' }} />);
+
+    fireEvent.click(screen.getByTestId('tab-orders-report'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('delete-order-btn-1')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('delete-order-btn-1'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('confirm-delete-order-modal-content')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('btn-confirm-delete-order'));
+
+    await waitFor(() => {
+      expect(salesApi.deleteOrderApi).toHaveBeenCalledWith(1);
+    });
+  });
+
+  it('bulk deletes selected orders via bulkDeleteOrdersApi and refreshes orders', async () => {
+    vi.spyOn(salesApi, 'bulkDeleteOrdersApi').mockResolvedValue({
+      deleted_count: 2,
+      message: '2 pedidos excluídos',
+    });
+
+    renderWithToast(<SalesManagement currentUser={{ role: 'superadmin' }} />);
+
+    fireEvent.click(screen.getByTestId('tab-orders-report'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('select-all-orders-checkbox')).toBeInTheDocument();
+    });
+
+    // Select all on page
+    fireEvent.click(screen.getByTestId('select-all-orders-checkbox'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('btn-bulk-delete')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('btn-bulk-delete'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('confirm-delete-order-modal-content')).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByTestId('btn-confirm-delete-order'));
+
+    await waitFor(() => {
+      expect(salesApi.bulkDeleteOrdersApi).toHaveBeenCalledWith([1, 2]);
+    });
+  });
 });
+

@@ -7,8 +7,15 @@ export { ProductPixelModal } from './ProductPixelModal';
 export { ProductOrderBumpsModal } from './ProductOrderBumpsModal';
 export { ProductUpsellModal } from './ProductUpsellModal';
 export { ProductAppearanceModal } from './ProductAppearanceModal';
+export { ProductConversionModal } from './ProductConversionModal';
+export { default as ProductDomainModal } from './ProductDomainModal';
+export { default as ProductABTestModal } from './ProductABTestModal';
 export { default as ProductActionsDropdown } from './ProductActionsDropdown';
 export { default as ProductsTable } from './ProductsTable';
+export { default as ProductInstallmentFields } from './ProductInstallmentFields';
+export { default as ProductSplitSimulatorModal } from './ProductSplitSimulatorModal';
 export { useProductManagement } from './useProductManagement';
 export * from './productApi';
+export * from './abTestApi';
+export * from './installmentApi';
 

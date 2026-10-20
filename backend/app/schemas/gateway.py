@@ -39,7 +39,8 @@ class GatewayTestConnectionResponse(BaseModel):
     details: Optional[Dict[str, Any]] = None
 
 class SplitRecipientCreate(BaseModel):
-    name: str
+    user_id: Optional[int] = None
+    name: Optional[str] = None
     email: Optional[str] = None
     document: Optional[str] = None
     pix_key: Optional[str] = None
@@ -47,10 +48,12 @@ class SplitRecipientCreate(BaseModel):
     crypto_wallet: Optional[str] = None
     crypto_network: Optional[str] = "polygon"
     external_recipient_id: Optional[str] = None
+    asaas_wallet_id: Optional[str] = None
     default_percentage: float = Field(default=0.0, ge=0.0, le=100.0)
     is_active: bool = True
 
 class SplitRecipientUpdate(BaseModel):
+    user_id: Optional[int] = None
     name: Optional[str] = None
     email: Optional[str] = None
     document: Optional[str] = None
@@ -59,11 +62,13 @@ class SplitRecipientUpdate(BaseModel):
     crypto_wallet: Optional[str] = None
     crypto_network: Optional[str] = None
     external_recipient_id: Optional[str] = None
+    asaas_wallet_id: Optional[str] = None
     default_percentage: Optional[float] = Field(default=None, ge=0.0, le=100.0)
     is_active: Optional[bool] = None
 
 class SplitRecipientResponse(BaseModel):
     id: int
+    user_id: Optional[int] = None
     name: str
     email: Optional[str] = None
     document: Optional[str] = None
@@ -72,6 +77,7 @@ class SplitRecipientResponse(BaseModel):
     crypto_wallet: Optional[str] = None
     crypto_network: Optional[str] = None
     external_recipient_id: Optional[str] = None
+    asaas_wallet_id: Optional[str] = None
     default_percentage: float = 0.0
     is_active: bool = True
     created_at: Optional[datetime] = None

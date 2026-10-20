@@ -199,3 +199,63 @@ def test_checkout_converts_abandoned_cart_and_pending_pix():
     assert stats["total_pix_generated"] >= 1
     assert stats["total_pix_pending"] >= 1
     assert stats["total_pix_pending_amount_brl"] >= 97.0
+
+
+def test_abandoned_carts_pagination_and_deletion():
+    headers = get_auth_headers()
+
+    # 1. Cria produto
+    prod_res = client.post("/api/v1/products/", json={
+        "name": "Curso de Tráfego",
+        "slug": "curso-de-trafego",
+        "price_brl": 197.0,
+        "is_active": True
+    }, headers=headers)
+    assert prod_res.status_code == 201
+
+    # 2. Cria 5 leads
+    created_cart_ids = []
+    for i in range(1, 6):
+        cap_res = client.post("/api/v1/checkout/capture-lead", json={
+            "slug": "curso-de-trafego",
+            "name": f"Lead {i}",
+            "email": f"lead{i}@teste.com",
+            "phone": f"1198888000{i}",
+            "phone_ddi": "55",
+            "estimated_amount_brl": 197.0
+        })
+        assert cap_res.status_code == 200
+        created_cart_ids.append(cap_res.json()["cart_id"])
+
+    # 3. Testa paginação com limite de 2 itens
+    page1_res = client.get("/api/v1/recovery/abandoned-carts?limit=2&offset=0", headers=headers)
+    assert page1_res.status_code == 200
+    assert page1_res.headers.get("X-Total-Count") == "5"
+    page1_data = page1_res.json()
+    assert len(page1_data) == 2
+
+    page2_res = client.get("/api/v1/recovery/abandoned-carts?limit=2&offset=2", headers=headers)
+    assert page2_res.status_code == 200
+    page2_data = page2_res.json()
+    assert len(page2_data) == 2
+
+    # 4. Deleta 1 carrinho individualmente
+    cart_to_delete = created_cart_ids[0]
+    del_res = client.delete(f"/api/v1/recovery/abandoned-carts/{cart_to_delete}", headers=headers)
+    assert del_res.status_code == 200
+    assert del_res.json()["success"] is True
+
+    # Verifica se total diminuiu para 4
+    check_res = client.get("/api/v1/recovery/abandoned-carts?limit=2&offset=0", headers=headers)
+    assert check_res.headers.get("X-Total-Count") == "4"
+
+    # 5. Deleta em massa 2 carrinhos
+    bulk_res = client.post("/api/v1/recovery/abandoned-carts/bulk-delete", json={
+        "cart_ids": [created_cart_ids[1], created_cart_ids[2]]
+    }, headers=headers)
+    assert bulk_res.status_code == 200
+    assert bulk_res.json()["deleted_count"] == 2
+
+    # Verifica se total diminuiu para 2
+    final_res = client.get("/api/v1/recovery/abandoned-carts?limit=2&offset=0", headers=headers)
+    assert final_res.headers.get("X-Total-Count") == "2"

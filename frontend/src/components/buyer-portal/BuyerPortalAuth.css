@@ -1,0 +1,254 @@
+/* ==============================================================================
+   Central do Comprador - Estilos de Autenticação Clean White (Auth & Login)
+   ============================================================================== */
+
+.buyer-portal-wrapper {
+  min-height: 100vh;
+  background-color: #f8fafc;
+  color: #0f172a;
+  font-family: inherit;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Auth Card & Container */
+.buyer-auth-container {
+  min-height: 80vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1rem;
+}
+
+.buyer-auth-card {
+  max-width: 480px;
+  width: 100%;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 2.5rem 2rem;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
+}
+
+.buyer-auth-header {
+  text-align: left;
+  margin-bottom: 1.5rem;
+}
+
+.buyer-auth-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #059669;
+  background-color: #ecfdf5;
+  padding: 0.35rem 0.8rem;
+  border-radius: 9999px;
+  border: 1px solid #a7f3d0;
+  margin-bottom: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.badge-dot {
+  width: 7px;
+  height: 7px;
+  background-color: #10b981;
+  border-radius: 50%;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+}
+
+.buyer-auth-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  color: #0f172a;
+  letter-spacing: -0.03em;
+}
+
+.buyer-auth-subtitle {
+  font-size: 0.925rem;
+  color: #64748b;
+  line-height: 1.55;
+  margin-bottom: 0;
+}
+
+.buyer-auth-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  background-color: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-bottom: 1.25rem;
+}
+
+.buyer-auth-form {
+  margin-top: 1rem;
+}
+
+.buyer-form-group {
+  margin-bottom: 1.25rem;
+}
+
+.buyer-form-label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 0.45rem;
+}
+
+.required-asterisk {
+  color: #ef4444;
+}
+
+.optional-tag {
+  color: #94a3b8;
+  font-weight: 400;
+  font-size: 0.8rem;
+}
+
+.buyer-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.buyer-input-icon {
+  position: absolute;
+  left: 1rem;
+  width: 18px;
+  height: 18px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.buyer-input-field {
+  width: 100%;
+  padding: 0.8rem 1rem 0.8rem 2.85rem;
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  color: #0f172a;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.buyer-input-field::placeholder {
+  color: #94a3b8;
+}
+
+.buyer-input-field:focus {
+  outline: none;
+  background-color: #ffffff;
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.buyer-input-field.code-input {
+  letter-spacing: 0.35em;
+  font-size: 1.35rem;
+  font-weight: 800;
+  text-align: center;
+  padding-left: 1rem;
+  color: #0f172a;
+}
+
+.buyer-code-hint {
+  font-size: 0.775rem;
+  color: #64748b;
+  margin-top: 0.45rem;
+}
+
+.buyer-btn-primary {
+  width: 100%;
+  padding: 0.9rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.28);
+  transition: all 0.2s ease;
+}
+
+.buyer-btn-primary:hover:not(:disabled) {
+  opacity: 0.96;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35);
+}
+
+.buyer-btn-primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.buyer-btn-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.buyer-auth-actions-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.25rem;
+}
+
+.buyer-btn-link {
+  background: none;
+  border: none;
+  color: #0284c7;
+  font-size: 0.825rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.buyer-btn-link:hover {
+  color: #0369a1;
+  text-decoration: underline;
+}
+
+.buyer-auth-security-notice {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.775rem;
+  color: #64748b;
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e2e8f0;
+}
+
+.spinner-sm {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

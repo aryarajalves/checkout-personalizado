@@ -438,8 +438,26 @@ export default function CheckoutThankYouPage({ orderCode: propOrderCode }) {
           )}
         </div>
 
+        {/* Link para Minhas Compras */}
+        <div style={{ marginTop: '16px', textAlign: 'center' }}>
+          <a
+            href="/minhas-compras"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '13px',
+              color: '#0284c7',
+              textDecoration: 'none',
+              fontWeight: 600,
+            }}
+          >
+            <span>Acompanhe seus pedidos em <strong>Minhas Compras</strong> →</span>
+          </a>
+        </div>
+
         {/* Rodapé Seguro */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#64748b', fontSize: '12.5px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: '#64748b', fontSize: '12.5px', marginTop: '12px' }}>
           <ShieldCheck size={16} color="#059669" />
           <span>Ambiente Seguro • Compra Aprovada e Processada</span>
         </div>

@@ -1,0 +1,252 @@
+/* ==============================================================================
+   Central do Comprador - Modais Clean White (Pix 2ª Via & Atualização de Cartão)
+   ============================================================================== */
+
+/* Modais (Backdrop Escuro Translúcido + Painel Branco Centralizado) */
+.buyer-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  z-index: 100;
+}
+
+.buyer-modal-panel {
+  max-width: 500px;
+  width: 100%;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.22);
+}
+
+.buyer-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  background-color: #ffffff;
+}
+
+.buyer-modal-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.pix-icon-badge {
+  background-color: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.card-icon-badge {
+  background-color: #eff6ff;
+  color: #0284c7;
+  border: 1px solid #bfdbfe;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.buyer-modal-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.buyer-modal-close-btn {
+  background-color: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.35rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.buyer-modal-close-btn:hover {
+  color: #0f172a;
+  background-color: #f1f5f9;
+}
+
+.buyer-modal-body {
+  padding: 1.5rem;
+  background-color: #ffffff;
+}
+
+.buyer-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+}
+
+.buyer-btn-secondary {
+  background-color: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  padding: 0.65rem 1.25rem;
+  border-radius: 9px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.buyer-btn-secondary:hover {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+}
+
+/* Pix Modal Details */
+.pix-order-summary-box {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem 1.15rem;
+  margin-bottom: 1.25rem;
+}
+
+.pix-summary-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  margin-bottom: 0.45rem;
+  color: #475569;
+}
+
+.pix-summary-row.highlight {
+  margin-top: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid #e2e8f0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.pix-summary-price {
+  color: #059669;
+  font-weight: 800;
+}
+
+.pix-qr-container {
+  display: flex;
+  justify-content: center;
+  padding: 1rem 0;
+}
+
+.pix-qr-image {
+  width: 190px;
+  height: 190px;
+  background-color: #ffffff;
+  padding: 0.5rem;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.pix-instructions-card {
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 1.25rem;
+}
+
+.pix-instructions-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  font-size: 0.85rem;
+  color: #0369a1;
+  line-height: 1.55;
+}
+
+.pix-copy-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.pix-copy-label {
+  font-size: 0.825rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.pix-copy-input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.pix-copy-text {
+  flex: 1;
+  padding: 0.65rem 0.85rem;
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #0f172a;
+  font-family: monospace;
+  font-size: 0.825rem;
+}
+
+.pix-btn-copy {
+  padding: 0.65rem 1.1rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.875rem;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+  transition: all 0.2s ease;
+}
+
+.pix-btn-copy:hover {
+  opacity: 0.95;
+}
+
+.pix-btn-copy.copied {
+  background: #047857;
+}
+
+/* Card Update Modal Details */
+.buyer-form-row-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.sub-target-info-card {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.875rem;
+  color: #334155;
+}
+
+.sub-info-hint {
+  font-size: 0.775rem;
+  color: #64748b;
+  margin-top: 0.4rem;
+}

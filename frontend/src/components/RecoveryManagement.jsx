@@ -7,13 +7,20 @@ import {
   fetchRecoveryStatsApi,
   fetchAbandonedCartsApi,
   fetchPendingPixApi,
+  deleteAbandonedCartApi,
+  bulkDeleteAbandonedCartsApi,
 } from './recovery/recoveryApi';
+import { useToast } from '../context/ToastContext';
 import '../styles/recovery.css';
 
 export default function RecoveryManagement() {
   const [activeTab, setActiveTab] = useState('abandoned'); // 'abandoned' | 'pix'
   const [stats, setStats] = useState({});
   const [abandonedCarts, setAbandonedCarts] = useState([]);
+  const [abandonedTotal, setAbandonedTotal] = useState(0);
+  const [abandonedPage, setAbandonedPage] = useState(1);
+  const pageSize = 20;
+
   const [pendingPixOrders, setPendingPixOrders] = useState([]);
   const [products, setProducts] = useState([]);
   const [selectedProductId, setSelectedProductId] = useState('');
@@ -27,6 +34,8 @@ export default function RecoveryManagement() {
   const [loadingStats, setLoadingStats] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
+
+  const { addToast } = useToast();
 
   // Carrega produtos para o dropdown de filtro
   const loadProducts = async () => {
@@ -63,12 +72,20 @@ export default function RecoveryManagement() {
       setLoadingData(true);
       setErrorMessage(null);
       if (activeTab === 'abandoned') {
-        const carts = await fetchAbandonedCartsApi({
+        const res = await fetchAbandonedCartsApi({
           productId: selectedProductId || undefined,
           status: abandonedStatus,
           search: abandonedSearch,
+          limit: pageSize,
+          offset: (abandonedPage - 1) * pageSize,
         });
-        setAbandonedCarts(carts);
+        if (Array.isArray(res)) {
+          setAbandonedCarts(res);
+          setAbandonedTotal(res.length);
+        } else {
+          setAbandonedCarts(res.items || []);
+          setAbandonedTotal(res.total || 0);
+        }
       } else {
         const pixOrders = await fetchPendingPixApi({
           productId: selectedProductId || undefined,
@@ -82,7 +99,11 @@ export default function RecoveryManagement() {
     } finally {
       setLoadingData(false);
     }
-  }, [activeTab, selectedProductId, abandonedStatus, abandonedSearch, pixStatus, pixSearch]);
+  }, [activeTab, selectedProductId, abandonedStatus, abandonedSearch, abandonedPage, pageSize, pixStatus, pixSearch]);
+
+  useEffect(() => {
+    setAbandonedPage(1);
+  }, [selectedProductId, abandonedStatus, abandonedSearch]);
 
   useEffect(() => {
     loadProducts();
@@ -96,6 +117,30 @@ export default function RecoveryManagement() {
   const handleRefreshAll = () => {
     loadStats();
     loadTabData();
+  };
+
+  const handleDeleteCart = async (cartId) => {
+    try {
+      await deleteAbandonedCartApi(cartId);
+      addToast('Carrinho abandonado excluído com sucesso!', 'success');
+      loadStats();
+      loadTabData();
+    } catch (err) {
+      addToast(err.message || 'Erro ao excluir carrinho.', 'error');
+      throw err;
+    }
+  };
+
+  const handleBulkDeleteCarts = async (cartIds) => {
+    try {
+      const res = await bulkDeleteAbandonedCartsApi(cartIds);
+      addToast(`${res.deleted_count || cartIds.length} carrinho(s) excluído(s) com sucesso!`, 'success');
+      loadStats();
+      loadTabData();
+    } catch (err) {
+      addToast(err.message || 'Erro ao excluir carrinhos em massa.', 'error');
+      throw err;
+    }
   };
 
   return (
@@ -181,12 +226,18 @@ export default function RecoveryManagement() {
       {activeTab === 'abandoned' ? (
         <AbandonedCartsTab
           carts={abandonedCarts}
+          totalCarts={abandonedTotal}
+          currentPage={abandonedPage}
+          pageSize={pageSize}
+          onPageChange={setAbandonedPage}
           loading={loadingData}
           onReload={handleRefreshAll}
           searchQuery={abandonedSearch}
           onSearchChange={setAbandonedSearch}
           statusFilter={abandonedStatus}
           onStatusFilterChange={setAbandonedStatus}
+          onDeleteCart={handleDeleteCart}
+          onBulkDeleteCarts={handleBulkDeleteCarts}
         />
       ) : (
         <PendingPixTab

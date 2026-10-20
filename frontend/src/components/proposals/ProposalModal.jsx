@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Sparkles, AlertCircle } from 'lucide-react';
 
-export default function ProposalModal({ isOpen, onClose, onSave, products }) {
+export default function ProposalModal({ isOpen, onClose, onSave, products, proposalToEdit = null }) {
+  const isEditMode = Boolean(proposalToEdit);
   const [formData, setFormData] = useState({
     product_id: products && products.length > 0 ? products[0].id : '',
     title: '',
@@ -22,6 +23,47 @@ export default function ProposalModal({ isOpen, onClose, onSave, products }) {
 
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    if (proposalToEdit) {
+      setFormData({
+        product_id: proposalToEdit.product_id || (products?.[0]?.id || ''),
+        title: proposalToEdit.title || '',
+        description: proposalToEdit.description || '',
+        customer_name: proposalToEdit.customer_name || '',
+        customer_email: proposalToEdit.customer_email || '',
+        customer_phone: proposalToEdit.customer_phone || '',
+        customer_cpf: proposalToEdit.customer_cpf || '',
+        amount_brl: proposalToEdit.amount_brl !== undefined ? String(proposalToEdit.amount_brl) : '',
+        payment_method_allowed: proposalToEdit.payment_method_allowed || 'all',
+        custom_pix_amount_brl: proposalToEdit.custom_pix_amount_brl ? String(proposalToEdit.custom_pix_amount_brl) : '',
+        custom_card_amount_brl: proposalToEdit.custom_card_amount_brl ? String(proposalToEdit.custom_card_amount_brl) : '',
+        max_installments: proposalToEdit.max_installments || 12,
+        expires_hours: 24,
+        closer_name: proposalToEdit.closer_name || '',
+        notes: proposalToEdit.notes || '',
+      });
+    } else {
+      setFormData({
+        product_id: products && products.length > 0 ? products[0].id : '',
+        title: '',
+        description: '',
+        customer_name: '',
+        customer_email: '',
+        customer_phone: '',
+        customer_cpf: '',
+        amount_brl: '',
+        payment_method_allowed: 'all',
+        custom_pix_amount_brl: '',
+        custom_card_amount_brl: '',
+        max_installments: 12,
+        expires_hours: 24,
+        closer_name: '',
+        notes: '',
+      });
+    }
+    setErrorMsg('');
+  }, [proposalToEdit, isOpen, products]);
 
   if (!isOpen) return null;
 
@@ -77,10 +119,10 @@ export default function ProposalModal({ isOpen, onClose, onSave, products }) {
         custom_card_amount_brl: formData.custom_card_amount_brl ? parseFloat(formData.custom_card_amount_brl) : null,
         max_installments: parseInt(formData.max_installments, 10),
         expires_hours: parseInt(formData.expires_hours, 10),
-      });
+      }, proposalToEdit ? proposalToEdit.id : null);
       onClose();
     } catch (err) {
-      setErrorMsg(err.response?.data?.detail || 'Erro ao gerar proposta personalizada.');
+      setErrorMsg(err.message || err.response?.data?.detail || 'Erro ao processar proposta comercial.');
     } finally {
       setSaving(false);
     }
@@ -113,7 +155,9 @@ export default function ProposalModal({ isOpen, onClose, onSave, products }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Sparkles size={22} color="#0284c7" />
-            <h2 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a', fontWeight: 700 }}>Nova Proposta Personalizada (High-Ticket)</h2>
+            <h2 style={{ margin: 0, fontSize: '1.25rem', color: '#0f172a', fontWeight: 700 }}>
+              {isEditMode ? `Editar Proposta (${proposalToEdit?.proposal_code || 'Personalizada'})` : 'Nova Proposta Personalizada (High-Ticket)'}
+            </h2>
           </div>
           <button
             type="button"
@@ -384,7 +428,7 @@ export default function ProposalModal({ isOpen, onClose, onSave, products }) {
               className="btn-new-proposal"
               style={{ padding: '0.65rem 1.5rem' }}
             >
-              {saving ? 'Gerando Link...' : 'Gerar Link da Proposta'}
+              {saving ? 'Salvando...' : (isEditMode ? 'Salvar Alterações' : 'Gerar Link da Proposta')}
             </button>
           </div>
         </form>

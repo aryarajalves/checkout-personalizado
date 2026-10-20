@@ -3,9 +3,10 @@ from typing import Optional, List
 from datetime import datetime
 
 class AffiliateBase(BaseModel):
-    name: str = Field(..., min_length=2, max_length=150, description="Nome completo do afiliado")
-    email: EmailStr = Field(..., description="E-mail de contato e acesso")
-    phone: str = Field(..., min_length=6, max_length=50, description="WhatsApp ou telefone")
+    user_id: Optional[int] = Field(None, description="ID do usuário vinculado")
+    name: Optional[str] = Field(None, max_length=150, description="Nome completo do afiliado")
+    email: Optional[EmailStr] = Field(None, description="E-mail de contato e acesso")
+    phone: Optional[str] = Field(None, max_length=50, description="WhatsApp ou telefone")
     document: Optional[str] = Field(None, max_length=30, description="CPF ou CNPJ")
     affiliate_code: Optional[str] = Field(None, max_length=50, description="Código de indicação (ex: ALEX10)")
     pix_key: Optional[str] = Field(None, max_length=100, description="Chave Pix para repasse")
@@ -16,11 +17,13 @@ class AffiliateBase(BaseModel):
     notes: Optional[str] = None
 
 
+
 class AffiliateCreate(AffiliateBase):
     pass
 
 
 class AffiliateUpdate(BaseModel):
+    user_id: Optional[int] = None
     name: Optional[str] = None
     email: Optional[EmailStr] = None
     phone: Optional[str] = None

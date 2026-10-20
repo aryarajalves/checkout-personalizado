@@ -12,6 +12,8 @@ export default function useLeadCapture({
   formData,
   appliedCoupon,
   selectedBumpIds = [],
+  abTestId,
+  abTestVariant,
 }) {
   const lastCapturedRef = useRef(null);
   const debounceTimeoutRef = useRef(null);
@@ -59,6 +61,8 @@ export default function useLeadCapture({
           estimated_amount_brl: estimatedAmount,
           coupon_code: appliedCoupon?.code || null,
           bump_ids: selectedBumpIds,
+          ab_test_id: abTestId || undefined,
+          ab_test_variant: abTestVariant || undefined,
           ...utmParams,
         });
         lastCapturedRef.current = currentKey;

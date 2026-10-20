@@ -72,6 +72,12 @@ async def nowpayments_webhook(
         order.paid_at = datetime.now(timezone.utc)
         db.commit()
         logger.info(f"🎉 Pedido {order.order_code} confirmado e PAGO via NOWPayments Webhook!")
+        if order.ab_test_id and order.ab_test_variant:
+            try:
+                from app.services.ab_test_service import record_ab_test_conversion
+                record_ab_test_conversion(db, order.ab_test_id, order.ab_test_variant, order.amount_brl)
+            except Exception as ab_err:
+                logger.error(f"Erro ao registrar conversão de Teste A/B no webhook NOWPayments: {ab_err}")
         try:
             dispatch_order_webhooks(order, "order.approved", db)
         except Exception as wh_err:
@@ -135,6 +141,11 @@ async def pagarme_webhook(
         db.commit()
         logger.warning(f"⚠️ Pedido {order.order_code} sofreu CHARGEBACK via Pagar.me Webhook!")
         try:
+            from app.services import security_service
+            security_service.handle_auto_blacklist_chargeback(db, order)
+        except Exception as bl_err:
+            logger.error(f"Erro ao aplicar auto-blacklist no chargeback: {bl_err}")
+        try:
             dispatch_order_webhooks(order, "order.chargeback", db)
         except Exception as wh_err:
             logger.error(f"Erro ao disparar webhook order.chargeback: {wh_err}")
@@ -149,6 +160,12 @@ async def pagarme_webhook(
         order.paid_at = datetime.now(timezone.utc)
         db.commit()
         logger.info(f"🎉 Pedido {order.order_code} confirmado e PAGO via Pagar.me Webhook!")
+        if order.ab_test_id and order.ab_test_variant:
+            try:
+                from app.services.ab_test_service import record_ab_test_conversion
+                record_ab_test_conversion(db, order.ab_test_id, order.ab_test_variant, order.amount_brl)
+            except Exception as ab_err:
+                logger.error(f"Erro ao registrar conversão de Teste A/B no webhook Pagar.me: {ab_err}")
         try:
             dispatch_order_webhooks(order, "order.approved", db)
         except Exception as wh_err:
@@ -162,6 +179,24 @@ async def pagarme_webhook(
             logger.error(f"Erro ao disparar webhook order.card_declined: {wh_err}")
 
     return {"status": "processed", "order_status": order.status, "order_code": order.order_code}
+
+
+@router.post("/asaas", status_code=status.HTTP_200_OK)
+async def asaas_webhook(
+    request: Request,
+    db: Session = Depends(get_db),
+    asaas_access_token: Optional[str] = Header(None, alias="asaas-access-token"),
+):
+    """
+    Recebe notificações de cobrança e parcelas do gateway Asaas (PAYMENT_RECEIVED, PAYMENT_OVERDUE, etc).
+    """
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Payload JSON inválido.")
+
+    from app.services.asaas_service import handle_asaas_webhook_event
+    return handle_asaas_webhook_event(db, body, asaas_access_token)
 
 
 @router.post("/{gateway}", status_code=status.HTTP_200_OK)
@@ -179,5 +214,8 @@ async def generic_webhook_dispatcher(
         return await nowpayments_webhook(request, db, x_nowpayments_sig)
     elif gateway_clean in ("pagarme", "stone"):
         return await pagarme_webhook(request, db)
+    elif gateway_clean == "asaas":
+        token = request.headers.get("asaas-access-token")
+        return await asaas_webhook(request, db, token)
     else:
         raise HTTPException(status_code=404, detail=f"Gateway {gateway} não suportado.")

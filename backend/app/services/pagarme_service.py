@@ -196,3 +196,51 @@ def create_pix_charge(
         "qr_code_base64": qr_svg,
         "expires_at": datetime.now(timezone.utc) + timedelta(minutes=60)
     }
+
+
+def refund_charge(
+    charge_id: str,
+    amount_cents: Optional[int] = None,
+    gateway_setting: Optional[GatewaySetting] = None
+) -> Dict[str, Any]:
+    """
+    Executa o estorno/reembolso da transação no Pagar.me V5.
+    Se não houver credencial real configurada ou for transação de teste,
+    realiza estorno simulado com log de sucesso para sandbox.
+    """
+    has_real_key = bool(
+        gateway_setting
+        and gateway_setting.is_active
+        and gateway_setting.api_key
+        and not gateway_setting.api_key.startswith("sk_test_placeholder")
+        and not gateway_setting.api_key.startswith("mock_")
+    )
+
+    if has_real_key and charge_id and not charge_id.startswith("pagarme_sim_"):
+        try:
+            logger.info(f"Iniciando requisição de estorno no Pagar.me V5 para charge_id={charge_id}")
+            auth_header = base64.b64encode(f"{gateway_setting.api_key}:".encode("utf-8")).decode("utf-8")
+            headers = {
+                "Authorization": f"Basic {auth_header}",
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+            payload = {}
+            if amount_cents:
+                payload["amount"] = amount_cents
+
+            with httpx.Client(timeout=10.0) as client:
+                res = client.post(f"{PAGARME_V5_API_URL}/charges/{charge_id}/refund", json=payload, headers=headers)
+                if res.status_code in [200, 201]:
+                    logger.info(f"Estorno concluído com sucesso no Pagar.me para charge_id={charge_id}")
+                    return {"success": True, "data": res.json()}
+                else:
+                    logger.warning(f"Resposta de erro no estorno Pagar.me ({res.status_code}): {res.text}")
+                    return {"success": False, "error": res.text}
+        except Exception as e:
+            logger.error(f"Erro ao comunicar estorno com Pagar.me para charge_id={charge_id}: {e}")
+            return {"success": False, "error": str(e)}
+
+    logger.info(f"Estorno simulado com sucesso (Sandbox/Simulação) para charge_id={charge_id}")
+    return {"success": True, "simulated": True}
+

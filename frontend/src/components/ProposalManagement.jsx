@@ -15,7 +15,9 @@ export default function ProposalManagement() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [productFilter, setProductFilter] = useState('');
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProposal, setEditingProposal] = useState(null);
 
   const getHeaders = () => {
     const token = localStorage.getItem('auth_token');
@@ -46,6 +48,7 @@ export default function ProposalManagement() {
       if (search.trim()) query.set('search', search.trim());
       if (statusFilter) query.set('status', statusFilter);
       if (productFilter) query.set('product_id', productFilter);
+      if (paymentMethodFilter) query.set('payment_method', paymentMethodFilter);
 
       const qs = query.toString();
       const url = qs ? `/api/v1/proposals?${qs}` : '/api/v1/proposals';
@@ -63,7 +66,7 @@ export default function ProposalManagement() {
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter, productFilter, addToast]);
+  }, [search, statusFilter, productFilter, paymentMethodFilter, addToast]);
 
   const fetchProducts = useCallback(async () => {
     try {
@@ -83,17 +86,37 @@ export default function ProposalManagement() {
     fetchProducts();
   }, [fetchMetrics, fetchProposals, fetchProducts]);
 
-  const handleCreateProposal = async (proposalData) => {
-    const res = await fetch('/api/v1/proposals', {
-      method: 'POST',
+  const handleOpenCreateModal = () => {
+    setEditingProposal(null);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (proposal) => {
+    setEditingProposal(proposal);
+    setIsModalOpen(true);
+  };
+
+  const handleSaveProposal = async (proposalData, editId) => {
+    const isEdit = Boolean(editId);
+    const url = isEdit ? `/api/v1/proposals/${editId}` : '/api/v1/proposals';
+    const method = isEdit ? 'PUT' : 'POST';
+
+    const res = await fetch(url, {
+      method,
       headers: getHeaders(),
       body: JSON.stringify(proposalData),
     });
     const data = await res.json();
     if (!res.ok) {
-      throw new Error(data.detail || 'Erro ao gerar proposta comercial.');
+      throw new Error(data.detail || (isEdit ? 'Erro ao atualizar proposta.' : 'Erro ao gerar proposta comercial.'));
     }
-    addToast('success', `Proposta ${data.proposal_code} gerada com sucesso! Link pronto para envio.`);
+    if (isEdit) {
+      addToast('success', `Proposta ${data.proposal_code} atualizada com sucesso!`);
+    } else {
+      addToast('success', `Proposta ${data.proposal_code} gerada com sucesso! Link pronto para envio.`);
+    }
+    setIsModalOpen(false);
+    setEditingProposal(null);
     fetchMetrics();
     fetchProposals();
   };
@@ -150,7 +173,7 @@ export default function ProposalManagement() {
         <button
           type="button"
           className="btn-new-proposal"
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleOpenCreateModal}
         >
           <Plus size={18} />
           Nova Proposta Personalizada
@@ -189,6 +212,20 @@ export default function ProposalManagement() {
 
           <select
             className="proposal-filter-select"
+            value={paymentMethodFilter}
+            onChange={(e) => setPaymentMethodFilter(e.target.value)}
+            data-testid="proposal-filter-payment-method"
+          >
+            <option value="">Todas as Formas de Pagamento</option>
+            <option value="all">Todos os Métodos Permitidos</option>
+            <option value="pix">Apenas Pix</option>
+            <option value="credit_card">Apenas Cartão</option>
+            <option value="hybrid_pix_card">Pix + Cartão (Híbrido)</option>
+            <option value="hybrid_two_cards">2 Cartões (Híbrido)</option>
+          </select>
+
+          <select
+            className="proposal-filter-select"
             value={productFilter}
             onChange={(e) => setProductFilter(e.target.value)}
           >
@@ -218,14 +255,19 @@ export default function ProposalManagement() {
         loading={loading}
         onCancel={handleCancelProposal}
         onDelete={handleDeleteProposal}
+        onEdit={handleOpenEditModal}
       />
 
-      {/* Modal para Criação de Nova Proposta */}
+      {/* Modal para Criação ou Edição de Proposta */}
       <ProposalModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSave={handleCreateProposal}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingProposal(null);
+        }}
+        onSave={handleSaveProposal}
         products={products}
+        proposalToEdit={editingProposal}
       />
     </div>
   );

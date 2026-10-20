@@ -34,6 +34,18 @@ class AbandonedCart(Base):
     src = Column(String(100), nullable=True, index=True)
 
     recovery_token = Column(String(64), unique=True, index=True, nullable=False, default=generate_recovery_token)
+    ab_test_id = Column(Integer, ForeignKey("ab_tests.id", ondelete="SET NULL"), nullable=True)
+    ab_test_variant = Column(String(10), nullable=True) # 'A' ou 'B'
+
+    # Endereço de Cobrança & Antifraude (ViaCEP) (#21)
+    billing_zip_code = Column(String(20), nullable=True)
+    billing_street = Column(String(255), nullable=True)
+    billing_number = Column(String(50), nullable=True)
+    billing_complement = Column(String(100), nullable=True)
+    billing_neighborhood = Column(String(100), nullable=True)
+    billing_city = Column(String(100), nullable=True)
+    billing_state = Column(String(10), nullable=True)
+
     status = Column(String(30), default="abandoned", index=True, nullable=False)  # 'abandoned', 'recovered', 'converted'
     contacted = Column(Boolean, default=False, nullable=False)
     notes = Column(Text, nullable=True)

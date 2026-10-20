@@ -27,4 +27,4 @@ class Coupon(Base):
     created_at = Column(DateTime, default=utc_now)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
-    product = relationship("Product", backref="coupons")
+    product = relationship("Product", foreign_keys=[product_id], backref="coupons")

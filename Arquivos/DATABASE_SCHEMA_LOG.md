@@ -268,6 +268,211 @@ Registro de migrações e atualizações estruturais do banco de dados (PostgreS
   - Nova Coluna: `proposal_id INTEGER NULL REFERENCES custom_proposals(id) ON DELETE SET NULL`
 - **Script de Migração:** `backend/scripts/migrate_custom_proposals.py`
 
+---
+
+### [16/10/2026] - Domínios Personalizados / CNAME Whitelabel por Expert (Fase 8.5)
+- **Tabela Alterada:** `products`
+  - Nova Coluna: `custom_domain VARCHAR(255) NULL` (armazena o domínio/subdomínio próprio do expert, ex: `pay.meudominio.com.br`).
+  - Novo Índice: `ix_products_custom_domain` (índice único para busca ultra-rápida por hostname e garantia de unicidade).
+- **Script de Migração:** `backend/scripts/add_custom_domain_to_products.py`
+
+---
+
+### [16/10/2026] - Perfil Financeiro do Usuário e Vínculo de Coprodutores/Afiliados
+- **Tabelas Alteradas:**
+  - `users`: Adição de colunas financeiras de repasse (`document VARCHAR(30)`, `document_type VARCHAR(10) DEFAULT 'cpf'`, `phone VARCHAR(50)`, `pix_key VARCHAR(100)`, `pix_key_type VARCHAR(20) DEFAULT 'cpf'`, `crypto_wallet VARCHAR(100)`, `crypto_network VARCHAR(50) DEFAULT 'polygon'`, `external_recipient_id VARCHAR(100)`, `updated_at TIMESTAMP`).
+  - `split_recipients`: Adição de `user_id INTEGER REFERENCES users(id) ON DELETE SET NULL` e índice `ix_split_recipients_user_id`.
+  - `affiliates`: Adição de `user_id INTEGER REFERENCES users(id) ON DELETE SET NULL` e índice `ix_affiliates_user_id`.
+- **Script de Migração:** `backend/scripts/add_user_financial_profile.py`
+
+---
+
+### [16/10/2026] - Desconto Automático por Método de Pagamento (Incentivo Pix e Cripto)
+- **Tabela Alterada:**
+  - `products`:
+    - `pix_discount_percent FLOAT DEFAULT 0.0`: Percentual de desconto especial para incentivar pagamentos à vista via Pix.
+    - `crypto_discount_percent FLOAT DEFAULT 0.0`: Percentual de desconto especial para pagamentos em Criptomoedas (MetaMask/Web3).
+- **Script de Migração:** `backend/scripts/add_product_payment_discounts.py`
+
+---
+
+### [17/10/2026] - Order Bump Vinculado ao Catálogo de Produtos e Ofertas
+- **Tabela Alterada:**
+  - `product_order_bumps`:
+    - `bump_product_id INTEGER REFERENCES products(id) ON DELETE SET NULL`: Vínculo do order bump ao produto real cadastrado no sistema (permitindo venda separada no futuro).
+    - `bump_offer_id INTEGER REFERENCES product_offers(id) ON DELETE SET NULL`: Vínculo à oferta de preço específica do produto caso ele possua múltiplos preços cadastrados.
+- **Índices Criados:** `idx_order_bumps_bump_product_id`, `idx_order_bumps_bump_offer_id`.
+- **Script de Migração:** `backend/scripts/add_bump_product_reference.py`
+
+---
+
+### [17/10/2026] - Reembolso com Registro de Motivo (Reembolso 1-Click)
+- **Tabela Alterada:** `orders`
+  - `refund_reason VARCHAR(255)`: Motivo do estorno selecionado ou informado pelo administrador (arrependimento, insatisfação, problemas técnicos, duplicidade, etc.).
+  - `refunded_at TIMESTAMP`: Data e hora exatas do estorno e reembolso da transação.
+- **Script de Migração:** `backend/scripts/add_refund_columns_to_orders.py`
+
+---
+
+### [17/10/2026] - Exit-Intent Popup (Desconto Relâmpago) & Prova Social Ao Vivo
+- **Tabela Alterada:** `products`
+  - `enable_exit_intent BOOLEAN NOT NULL DEFAULT FALSE`: Ativação do popup de retenção na tentativa de saída da página.
+  - `exit_intent_coupon_id INTEGER REFERENCES coupons(id) ON DELETE SET NULL`: Vínculo ao cupom de desconto existente que será aplicado automaticamente com 1-clique no popup.
+  - `exit_intent_title VARCHAR(200)`: Título persuasivo exibido no popup de saída.
+  - `exit_intent_subtitle VARCHAR(255)`: Subtítulo com copy de urgência no popup de saída.
+  - `enable_social_proof BOOLEAN NOT NULL DEFAULT FALSE`: Ativação de balões flutuantes de compras recentes no checkout.
+  - `social_proof_mode VARCHAR(30) NOT NULL DEFAULT 'hybrid'`: Modo de prova social selecionado pelo produtor (`real` = apenas compras reais, `simulated` = simulação dinâmica realista, `hybrid` = compras reais com preenchimento dinâmico).
+- **Script de Migração:** `backend/scripts/add_exit_intent_and_social_proof_to_products.py`
+
+---
+
+### [17/10/2026] - Upsell & Downsell com Catálogo, Tokenização de Cartão e 1-Click Buy
+- **Tabelas Alteradas:**
+  - `product_upsells`:
+    - `upsell_product_id INTEGER REFERENCES products(id) ON DELETE SET NULL`: Vínculo do UpSell a um produto real do catálogo.
+    - `upsell_offer_id INTEGER REFERENCES product_offers(id) ON DELETE SET NULL`: Vínculo à oferta de preço específica do UpSell.
+    - `enable_downsell BOOLEAN NOT NULL DEFAULT FALSE`: Ativação de oferta de Downsell caso o comprador recuse o UpSell.
+    - `downsell_product_id INTEGER REFERENCES products(id) ON DELETE SET NULL`: Vínculo do Downsell a um produto do catálogo.
+    - `downsell_offer_id INTEGER REFERENCES product_offers(id) ON DELETE SET NULL`: Vínculo à oferta de preço do Downsell.
+    - `downsell_title VARCHAR(255)`: Headline persuasiva do Downsell.
+    - `downsell_subtitle VARCHAR(255)`: Subtítulo do Downsell.
+    - `downsell_description TEXT`: Descrição detalhada do Downsell.
+    - `downsell_price_brl FLOAT DEFAULT 0.0`: Preço exclusivo do Downsell em BRL.
+    - `downsell_image_url VARCHAR(500)`: URL da imagem promocional do Downsell.
+    - `downsell_video_url VARCHAR(500)`: URL do vídeo de vendas do Downsell.
+    - `downsell_external_url VARCHAR(500)`: Link externo opcional para página de Downsell.
+  - `orders`:
+    - `parent_order_id INTEGER REFERENCES orders(id) ON DELETE SET NULL`: Vínculo do pedido filho de UpSell/Downsell ao pedido principal.
+    - `order_type VARCHAR(30) NOT NULL DEFAULT 'main'`: Tipo do pedido (`main`, `upsell`, `downsell`).
+    - `card_token VARCHAR(255)`: Token do cartão Pagar.me V5 armazenado com segurança para execução de cobranças em 1 clique sem reinserir dados.
+- **Índices Criados:** `idx_upsells_upsell_product_id`, `idx_upsells_upsell_offer_id`, `idx_upsells_downsell_product_id`, `idx_upsells_downsell_offer_id`, `idx_orders_parent_order_id`, `idx_orders_order_type`.
+- **Script de Migração:** `backend/scripts/add_upsell_downsell_and_card_tokenization.py`
+
+---
+
+### [17/10/2026] - Vídeo de Vendas (Mini-VSL) & Player de Áudio WhatsApp no Topo do Checkout (#13)
+- **Tabela Alterada:** `products`
+  - `header_media_type VARCHAR(30) NOT NULL DEFAULT 'none'`: Tipo de mídia no topo do checkout (`'none'`, `'video'`, `'audio'`, `'both'`).
+  - `header_video_url VARCHAR(500)`: URL do vídeo de vendas / Mini-VSL (YouTube, Vimeo, PandaVideo ou MP4).
+  - `header_audio_url VARCHAR(500)`: URL do arquivo de áudio (MP3, AAC, WAV) para o player WhatsApp.
+  - `header_audio_author_name VARCHAR(100) DEFAULT 'Mensagem do Especialista'`: Nome do autor/expert exibido no player WhatsApp.
+  - `header_audio_author_avatar VARCHAR(500)`: URL da foto/avatar do expert para humanização da nota de voz.
+- **Script de Migração:** `backend/scripts/add_header_media_to_products.py`
+
+---
+
+### [17/10/2026] - Sistema Multi-Pixel: Google Ads & TikTok Ads (#17)
+- **Tabela Alterada:** `products`
+  - `google_ads_id VARCHAR(50) NULL`: ID de Acompanhamento do Google Ads (ex: `AW-123456789` ou `G-XXXXX`).
+  - `google_ads_conversion_label VARCHAR(100) NULL`: Rótulo de Conversão do Google Ads para o evento Purchase / Compra (ex: `AbCdEfGhIjKlMnOpQrS`).
+  - `tiktok_pixel_id VARCHAR(50) NULL`: ID do Pixel do TikTok Ads (ex: `C1234567890ABCDEFGH`).
+- **Script de Migração:** `backend/scripts/add_multi_pixels_to_products.py`
+
+---
+
+### [17/10/2026] - Escudo Anti-Carding, Velocity Check & Blacklist Própria (#10)
+- **Tabelas Criadas:**
+  - `blacklist_entries`: Gerencia bloqueios de clientes indesejados e fraudadores por CPF, E-mail, Telefone e Endereço IP (`entry_type`, `value`, `reason`, `is_active`, `created_at`, `updated_at`).
+  - `card_attempt_logs`: Registra em tempo real as tentativas de pagamento com cartão para cálculo de frequência e velocity check (`ip_address`, `cpf`, `email`, `device_fingerprint`, `order_code`, `status`, `reason`, `created_at`).
+  - `security_settings`: Configurações de segurança da conta com threshold padrão de 5 tentativas em 10 minutos (`velocity_threshold`, `velocity_window_minutes`, `auto_blacklist_on_chargeback`, `is_velocity_enabled`, `is_blacklist_enabled`, `updated_at`).
+- **Script de Migração:** `backend/scripts/add_security_anti_carding_tables.py`
+
+---
+
+### [17/10/2026] - Teste A/B Nativo de Checkout e Ofertas (Split 50/50) (#18)
+- **Tabelas Criadas:**
+  - `ab_tests`: Gerenciamento do teste A/B no produto (`product_id`, `name`, `variant_a_offer_id`, `variant_b_offer_id`, `is_active`, `split_ratio`, `visits_a`, `visits_b`, `initiates_a`, `initiates_b`, `conversions_a`, `conversions_b`, `revenue_brl_a`, `revenue_brl_b`, `created_at`, `updated_at`).
+- **Tabelas Alteradas:**
+  - `orders`: Adicionadas as colunas `ab_test_id INTEGER REFERENCES ab_tests(id) ON DELETE SET NULL` e `ab_test_variant VARCHAR(10) NULL` para atribuição e rastreamento de receita do teste.
+  - `abandoned_checkouts`: Adicionadas as colunas `ab_test_id INTEGER NULL` e `ab_test_variant VARCHAR(10) NULL` para análise de abandono por variante.
+---
+
+### [18/10/2026] - Regras de Parcelamento no Cartão e Simulador de Split (#4)
+- **Tabela Alterada:** `products`
+  - `max_installments INTEGER DEFAULT 12`: Limite máximo de parcelas permitidas no cartão (1x a 12x).
+  - `free_installments_count INTEGER DEFAULT 1`: Quantidade de parcelas sem juros para o comprador (1x a 12x).
+  - `interest_rate_percent FLOAT DEFAULT 2.99`: Taxa de juros ao mês para parcelamento no cartão (padrão de mercado 2.99% a.m.).
+  - `interest_payer VARCHAR(20) DEFAULT 'buyer'`: Quem arca com as taxas de parcelamento ('buyer' = comprador paga o acréscimo; 'producer' = produtor absorve a taxa).
+- **Script de Migração:** `backend/scripts/add_installment_rules_to_products.py`
+
+---
+
+### [19/10/2026] - Central Rápida do Comprador (/minhas-compras) e Área de Membros (#15)
+- **Tabela Alterada:** `products`
+  - `member_area_url VARCHAR(500) NULL`: URL direta de acesso à Área de Membros ou entrega do conteúdo do aluno para pedidos pagos.
+- **Tabelas Criadas:**
+  - `buyer_access_codes`: Armazena códigos temporários OTP de 6 dígitos gerados para autenticação segura do comprador (`email`, `cpf`, `code`, `expires_at`, `is_used`, `created_at`).
+- **Script de Migração:** `backend/scripts/add_buyer_portal_and_member_area.py`
+
+---
+
+### [19/10/2026] - Fallback Inteligente de Cartão Recusado (#5)
+- **Tabela Alterada:** `products`
+  - `enable_card_fallback BOOLEAN DEFAULT TRUE`: Habilita o modal de recuperação instantânea quando um cartão for recusado.
+  - `card_fallback_discount_percent FLOAT DEFAULT 0.0`: Percentual de desconto adicional no Pix para salvar a venda no momento da recusa.
+- **Script de Migração:** `backend/scripts/add_card_fallback_to_products.py`
+
+---
+
+### [19/10/2026] - Endereço de Cobrança & Antifraude (ViaCEP) (#21)
+- **Tabela Alterada:** `products`
+  - `require_billing_address BOOLEAN DEFAULT FALSE`: Permite configurar por produto a exigência de endereço de cobrança no cartão/boleto para antifraude.
+- **Tabelas Alteradas:** `orders` e `abandoned_checkouts`
+  - `billing_zip_code VARCHAR(20) NULL`: CEP informado pelo comprador.
+  - `billing_street VARCHAR(255) NULL`: Logradouro (rua/avenida) autocompletado pelo ViaCEP ou informado manualmente.
+  - `billing_number VARCHAR(50) NULL`: Número do endereço.
+  - `billing_complement VARCHAR(100) NULL`: Complemento (apto, bloco, etc.).
+  - `billing_neighborhood VARCHAR(100) NULL`: Bairro autocompletado pelo ViaCEP.
+  - `billing_city VARCHAR(100) NULL`: Cidade autocompletada pelo ViaCEP.
+  - `billing_state VARCHAR(10) NULL`: Estado / UF (ex: SP, RJ).
+- **Script de Migração:** `backend/scripts/add_billing_address_tables.py`
+
+---
+
+### [19/10/2026] - Boleto Parcelado & Pix Parcelado via Asaas (Carnê Digital + Entrada Pix) (#6)
+- **Tabela Alterada:** `products`
+  - `enable_asaas_installments BOOLEAN DEFAULT FALSE`: Habilita opção de Boleto/Pix Parcelado (Carnê Digital) no checkout.
+  - `asaas_max_installments INTEGER DEFAULT 12`: Limite máximo de parcelas permitidas no carnê (até 24x).
+  - `asaas_interest_percent FLOAT DEFAULT 0.0`: Taxa de juros/acréscimo mensal no carnê (%).
+  - `asaas_require_entry_pix BOOLEAN DEFAULT TRUE`: Exige 1ª parcela paga via Pix imediato para liberação instantânea de acesso.
+- **Tabela Alterada:** `split_recipients`
+  - `asaas_wallet_id VARCHAR(100) NULL`: ID da carteira Asaas (`walletId`) para divisão automática do split a cada parcela do carnê liquidada.
+- **Tabela Alterada:** `orders`
+  - `asaas_customer_id VARCHAR(100) NULL`: ID do cliente cadastrado no Asaas (`cus_XXXXXX`).
+  - `asaas_installment_id VARCHAR(100) NULL`: ID do carnê/agrupamento de parcelas no Asaas.
+- **Tabela Criada:** `order_installments`
+  - Armazena individualmente cada parcela do carnê digital com links, código de barras e QR Code Pix:
+    - `id SERIAL PRIMARY KEY`
+    - `order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE`
+    - `installment_number INTEGER NOT NULL`
+    - `total_installments INTEGER NOT NULL`
+    - `amount_brl FLOAT NOT NULL`
+    - `due_date TIMESTAMP NOT NULL`
+    - `status VARCHAR(30) DEFAULT 'pending'` ('pending', 'paid', 'overdue', 'canceled', 'refunded')
+    - `payment_method VARCHAR(30) DEFAULT 'boleto'` ('pix', 'boleto', 'boleto_pix')
+    - `asaas_payment_id VARCHAR(100) NULL` (ID individual da cobrança no Asaas)
+    - `bank_slip_url VARCHAR(500) NULL` (URL do PDF do boleto)
+    - `bank_slip_bar_code VARCHAR(150) NULL` (Linha digitável)
+    - `qr_code_base64 TEXT NULL` (QR Code Pix embutido no boleto)
+    - `qr_code_text TEXT NULL` (Código Copia e Cola Pix da parcela)
+    - `paid_at TIMESTAMP NULL`
+    - `created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`
+    - `updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`
+    - Índices: `ix_order_installments_order_id`, `ix_order_installments_asaas_payment_id`, `ix_order_installments_status`.
+- **Script de Migração:** `backend/scripts/add_asaas_installments.py`
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

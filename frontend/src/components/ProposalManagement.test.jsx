@@ -133,4 +133,57 @@ describe('ProposalManagement - Painel de Propostas High-Ticket', () => {
       expect(screen.getByText(/Gerar Link da Proposta/i)).toBeInTheDocument();
     });
   });
+
+  it('permite filtrar propostas pela forma de pagamento escolhida', async () => {
+    render(
+      <ToastProvider>
+        <ProposalManagement />
+      </ToastProvider>
+    );
+
+    const paymentSelect = screen.getByTestId('proposal-filter-payment-method');
+    expect(paymentSelect).toBeInTheDocument();
+
+    fireEvent.change(paymentSelect, { target: { value: 'pix' } });
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining('payment_method=pix'),
+        expect.any(Object)
+      );
+    });
+  });
+
+  it('abre o modal em modo de edição ao clicar no botão de editar da proposta e salva alterações', async () => {
+    render(
+      <ToastProvider>
+        <ProposalManagement />
+      </ToastProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('btn-edit-proposal-1')).toBeInTheDocument();
+    });
+
+    const editBtn = screen.getByTestId('btn-edit-proposal-1');
+    fireEvent.click(editBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Editar Proposta \(PROP-20261016-AAA111\)/i)).toBeInTheDocument();
+      expect(screen.getByText(/Salvar Alterações/i)).toBeInTheDocument();
+    });
+
+    const saveBtn = screen.getByText(/Salvar Alterações/i);
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/v1/proposals/1',
+        expect.objectContaining({
+          method: 'PUT',
+        })
+      );
+    });
+  });
 });
+

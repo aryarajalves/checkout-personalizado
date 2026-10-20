@@ -38,6 +38,19 @@ export function maskCardExpiry(value = '') {
     .replace(/(\d{2})(\d)/, '$1/$2');
 }
 
+export function isProposalExpired(proposal) {
+  if (!proposal) return false;
+  if (proposal.is_expired) return true;
+  if (proposal.status && proposal.status !== 'active') return true;
+  if (proposal.expires_at) {
+    const expiryTime = new Date(proposal.expires_at).getTime();
+    if (!isNaN(expiryTime) && expiryTime <= Date.now()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 export function validateEmail(email = '') {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 }
@@ -91,13 +104,18 @@ export function buildCheckoutPayload({
   cardData,
   cryptoData,
   hybridData,
+  asaasData,
   product,
   selectedOffer,
   selectedBumpIds,
   appliedCoupon,
   affiliateCode,
   utmParams,
-  proposalCode
+  proposalCode,
+  abTestId,
+  abTestVariant,
+  cardFallbackApplied,
+  billingAddress,
 }) {
   const payload = {
     slug: selectedOffer?.slug || product?.slug,
@@ -105,14 +123,29 @@ export function buildCheckoutPayload({
     email: formData.email.trim(),
     phone: formData.phone.trim(),
     phone_ddi: formData.phone_ddi || '55',
-    cpf: product?.require_cpf ? formData.cpf.trim() : null,
+    cpf: (product?.require_cpf || paymentMethod === 'asaas_installments') ? formData.cpf?.trim() : null,
     payment_method: paymentMethod,
     bump_ids: selectedBumpIds?.length > 0 ? selectedBumpIds : undefined,
     coupon_code: appliedCoupon ? appliedCoupon.code : undefined,
     affiliate_code: affiliateCode || undefined,
     proposal_code: proposalCode || undefined,
+    ab_test_id: abTestId || undefined,
+    ab_test_variant: abTestVariant || undefined,
+    card_fallback_applied: cardFallbackApplied || undefined,
     ...utmParams,
   };
+
+  if (billingAddress && (paymentMethod === 'credit_card' || paymentMethod.startsWith('hybrid') || paymentMethod === 'asaas_installments')) {
+    Object.assign(payload, {
+      billing_zip_code: billingAddress.zipCode?.trim() || undefined,
+      billing_street: billingAddress.street?.trim() || undefined,
+      billing_number: billingAddress.number?.trim() || undefined,
+      billing_complement: billingAddress.complement?.trim() || undefined,
+      billing_neighborhood: billingAddress.neighborhood?.trim() || undefined,
+      billing_city: billingAddress.city?.trim() || undefined,
+      billing_state: billingAddress.state?.trim() || undefined,
+    });
+  }
 
   if (paymentMethod === 'credit_card') {
     Object.assign(payload, {
@@ -121,6 +154,10 @@ export function buildCheckoutPayload({
       card_expiry: cardData.cardExpiry,
       card_cvv: cardData.cardCvv,
       installments: cardData.installments,
+    });
+  } else if (paymentMethod === 'asaas_installments') {
+    Object.assign(payload, {
+      asaas_installments: asaasData?.installments || 2,
     });
   } else if (paymentMethod === 'crypto') {
     Object.assign(payload, { crypto_currency: cryptoData.currency, crypto_network: cryptoData.network });
@@ -154,5 +191,101 @@ export function buildCheckoutPayload({
   }
 
   return payload;
+}
+
+export function calculateCheckoutTotals({
+  product,
+  selectedOffer,
+  proposal,
+  selectedBumpIds = [],
+  appliedCoupon = null,
+  paymentMethod = 'pix',
+  cardFallbackApplied = false,
+}) {
+  const activeBumps = product?.order_bumps?.filter((b) => b.is_active) || [];
+  const selectedBumpsList = activeBumps.filter((b) => selectedBumpIds.includes(b.id));
+  const bumpsTotalBrl = selectedBumpsList.reduce((acc, b) => acc + (b.price_brl || 0), 0);
+  const currentPriceBrl = proposal && !proposal.is_expired
+    ? proposal.amount_brl
+    : (selectedOffer?.price_brl ?? product?.price_brl ?? 0);
+  const currentPriceUsd = selectedOffer?.price_usd ?? product?.price_usd;
+  const rawTotalBrl = currentPriceBrl + bumpsTotalBrl;
+  const usdRate = currentPriceUsd && currentPriceBrl > 0 ? currentPriceUsd / currentPriceBrl : null;
+  const rawTotalUsd = currentPriceUsd
+    ? (usdRate ? rawTotalBrl * usdRate : currentPriceUsd)
+    : (rawTotalBrl / 5.0);
+
+  // Cupom de desconto
+  const couponDiscountBrl = appliedCoupon
+    ? Math.round(rawTotalBrl * (appliedCoupon.discount_percent / 100) * 100) / 100
+    : 0;
+  const totalAfterCouponBrl = Math.max(0.01, Math.round((rawTotalBrl - couponDiscountBrl) * 100) / 100);
+
+  const couponDiscountUsd = appliedCoupon && rawTotalUsd
+    ? Math.round(rawTotalUsd * (appliedCoupon.discount_percent / 100) * 100) / 100
+    : 0;
+  const totalAfterCouponUsd = rawTotalUsd
+    ? Math.max(0.01, Math.round((rawTotalUsd - couponDiscountUsd) * 100) / 100)
+    : null;
+
+  // Desconto automático por método de pagamento
+  let methodDiscountPercent = 0;
+  if (paymentMethod === 'pix') {
+    if (product?.pix_discount_percent > 0) {
+      methodDiscountPercent += Number(product.pix_discount_percent);
+    }
+    if (cardFallbackApplied && product?.enable_card_fallback !== false && Number(product?.card_fallback_discount_percent || 0) > 0) {
+      methodDiscountPercent += Number(product.card_fallback_discount_percent);
+    }
+  } else if (paymentMethod === 'crypto' && product?.crypto_discount_percent > 0) {
+    methodDiscountPercent = Number(product.crypto_discount_percent);
+  }
+
+  const methodDiscountBrl = methodDiscountPercent > 0
+    ? Math.round(totalAfterCouponBrl * (methodDiscountPercent / 100) * 100) / 100
+    : 0;
+  const finalTotalBrl = Math.max(0.01, Math.round((totalAfterCouponBrl - methodDiscountBrl) * 100) / 100);
+
+  const methodDiscountUsd = (methodDiscountPercent > 0 && totalAfterCouponUsd)
+    ? Math.round(totalAfterCouponUsd * (methodDiscountPercent / 100) * 100) / 100
+    : 0;
+  const finalTotalUsd = totalAfterCouponUsd
+    ? Math.max(0.01, Math.round((totalAfterCouponUsd - methodDiscountUsd) * 100) / 100)
+    : null;
+
+  const methodDiscount = methodDiscountPercent > 0 ? {
+    method: paymentMethod,
+    percent: methodDiscountPercent,
+    amount_brl: methodDiscountBrl,
+    amount_usd: methodDiscountUsd,
+  } : null;
+
+  const couponForSummary = appliedCoupon ? {
+    ...appliedCoupon,
+    discount_amount_brl: couponDiscountBrl,
+    discount_amount_usd: couponDiscountUsd,
+  } : null;
+
+  return {
+    activeBumps,
+    selectedBumpsList,
+    bumpsTotalBrl,
+    currentPriceBrl,
+    currentPriceUsd,
+    rawTotalBrl,
+    rawTotalUsd,
+    usdRate,
+    couponDiscountBrl,
+    totalAfterCouponBrl,
+    couponDiscountUsd,
+    totalAfterCouponUsd,
+    methodDiscountPercent,
+    methodDiscountBrl,
+    methodDiscountUsd,
+    methodDiscount,
+    finalTotalBrl,
+    finalTotalUsd,
+    couponForSummary,
+  };
 }
 

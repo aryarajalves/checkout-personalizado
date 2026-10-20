@@ -11,6 +11,15 @@ export async function fetchPublicProductApi(slug) {
   return response.json();
 }
 
+export async function fetchPublicProductByDomainApi(domain) {
+  const response = await fetch(`/api/v1/products/public/by-domain/${encodeURIComponent(domain)}`);
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Produto não encontrado para este domínio.');
+  }
+  return response.json();
+}
+
 export async function processCheckoutApi(payload) {
   const response = await fetch('/api/v1/checkout/process', {
     method: 'POST',
@@ -22,7 +31,14 @@ export async function processCheckoutApi(payload) {
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.detail || 'Não foi possível processar a cobrança.');
+    const message = typeof errorData.detail === 'string'
+      ? errorData.detail
+      : (errorData.detail?.message || 'Não foi possível processar a cobrança.');
+    const error = new Error(message);
+    error.status = response.status;
+    error.code = response.headers.get('x-error-code') || (typeof errorData.detail === 'object' ? errorData.detail?.code : null);
+    error.data = errorData;
+    throw error;
   }
   return response.json();
 }
@@ -94,5 +110,31 @@ export async function validateCouponApi(code, slug, bumpIds = []) {
   return response.json();
 }
 
+export async function executeOneClickBuyApi({ order_code, offer_type = 'upsell', payment_method = null }) {
+  const response = await fetch('/api/v1/checkout/one-click-buy', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      order_code,
+      offer_type,
+      payment_method,
+    }),
+  });
 
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Não foi possível processar a compra em 1 clique.');
+  }
+  return response.json();
+}
 
+export async function fetchCartByTokenApi(token) {
+  const response = await fetch(`/api/v1/recovery/cart-by-token/${encodeURIComponent(token)}`);
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.detail || 'Carrinho não encontrado para este token.');
+  }
+  return response.json();
+}

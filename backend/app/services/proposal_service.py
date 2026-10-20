@@ -78,7 +78,7 @@ def _enrich_proposal_response(prop: CustomProposal, base_url: str = "") -> Custo
 def create_proposal(
     db: Session,
     data: CustomProposalCreate,
-    base_url: str = "http://localhost:3001"
+    base_url: str = "http://localhost:3003"
 ) -> CustomProposalResponse:
     product = db.query(Product).filter(Product.id == data.product_id).first()
     if not product:
@@ -152,15 +152,19 @@ def list_proposals(
     db: Session,
     product_id: Optional[int] = None,
     status_filter: Optional[str] = None,
+    payment_method: Optional[str] = None,
     search: Optional[str] = None,
     skip: int = 0,
     limit: int = 50,
-    base_url: str = "http://localhost:3001"
+    base_url: str = "http://localhost:3003"
 ) -> Tuple[List[CustomProposalResponse], int]:
     query = db.query(CustomProposal)
 
     if product_id:
         query = query.filter(CustomProposal.product_id == product_id)
+
+    if payment_method:
+        query = query.filter(CustomProposal.payment_method_allowed == payment_method)
 
     if status_filter:
         now_utc = datetime.now(timezone.utc)
@@ -193,6 +197,103 @@ def list_proposals(
     proposals = query.order_by(desc(CustomProposal.created_at)).offset(skip).limit(limit).all()
 
     return [_enrich_proposal_response(p, base_url) for p in proposals], total
+
+
+def update_proposal(
+    db: Session,
+    proposal_id: int,
+    data: CustomProposalUpdate,
+    base_url: str = "http://localhost:3003"
+) -> CustomProposalResponse:
+    proposal = db.query(CustomProposal).filter(CustomProposal.id == proposal_id).first()
+    if not proposal:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Proposta com ID {proposal_id} não encontrada."
+        )
+
+    if proposal.status == "paid":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Não é possível alterar uma proposta que já foi paga."
+        )
+
+    if data.product_id is not None and data.product_id != proposal.product_id:
+        product = db.query(Product).filter(Product.id == data.product_id).first()
+        if not product:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Produto com ID {data.product_id} não encontrado."
+            )
+        proposal.product_id = data.product_id
+
+    if data.title is not None:
+        proposal.title = data.title.strip()
+    if data.description is not None:
+        proposal.description = data.description.strip() if data.description else None
+    if data.customer_name is not None:
+        proposal.customer_name = data.customer_name.strip()
+    if data.customer_email is not None:
+        proposal.customer_email = data.customer_email.strip().lower()
+    if data.customer_phone is not None:
+        proposal.customer_phone = data.customer_phone.strip()
+    if data.customer_cpf is not None:
+        proposal.customer_cpf = data.customer_cpf.strip() if data.customer_cpf else None
+    if data.closer_name is not None:
+        proposal.closer_name = data.closer_name.strip() if data.closer_name else None
+    if data.notes is not None:
+        proposal.notes = data.notes.strip() if data.notes else None
+    if data.max_installments is not None:
+        proposal.max_installments = data.max_installments
+    if data.offer_id is not None:
+        proposal.offer_id = data.offer_id
+
+    if data.amount_brl is not None:
+        if data.amount_brl <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="O valor da proposta negociada deve ser maior que zero."
+            )
+        proposal.amount_brl = round(data.amount_brl, 2)
+
+    if data.payment_method_allowed is not None:
+        proposal.payment_method_allowed = data.payment_method_allowed
+
+    if data.custom_pix_amount_brl is not None:
+        proposal.custom_pix_amount_brl = data.custom_pix_amount_brl
+    if data.custom_card_amount_brl is not None:
+        proposal.custom_card_amount_brl = data.custom_card_amount_brl
+
+    if proposal.payment_method_allowed == "hybrid_pix_card":
+        if proposal.custom_pix_amount_brl is not None and proposal.custom_card_amount_brl is not None:
+            sum_parts = round(float(proposal.custom_pix_amount_brl) + float(proposal.custom_card_amount_brl), 2)
+            if sum_parts != round(proposal.amount_brl, 2):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"A soma da entrada Pix (R$ {proposal.custom_pix_amount_brl:.2f}) e do Cartão (R$ {proposal.custom_card_amount_brl:.2f}) deve ser igual ao valor total negociado (R$ {proposal.amount_brl:.2f})."
+                )
+
+    now_utc = datetime.now(timezone.utc)
+    if data.expires_at is not None:
+        exp = data.expires_at if data.expires_at.tzinfo else data.expires_at.replace(tzinfo=timezone.utc)
+        if exp <= now_utc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A nova data de expiração da proposta deve ser no futuro."
+            )
+        proposal.expires_at = exp
+    elif data.expires_hours is not None:
+        proposal.expires_at = now_utc + timedelta(hours=data.expires_hours)
+
+    if data.status is not None:
+        proposal.status = data.status
+
+    proposal.updated_at = now_utc
+    db.commit()
+    db.refresh(proposal)
+
+    logger.info(f"Proposta {proposal.proposal_code} (ID: {proposal.id}) atualizada com sucesso.")
+    return _enrich_proposal_response(proposal, base_url)
 
 
 def get_proposal_metrics(db: Session) -> ProposalMetricsResponse:

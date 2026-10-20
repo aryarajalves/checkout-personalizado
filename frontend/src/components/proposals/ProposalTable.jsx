@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Copy, MessageCircle, Ban, ExternalLink, Check, Trash2 } from 'lucide-react';
+import { Copy, MessageCircle, Ban, ExternalLink, Check, Trash2, Pencil } from 'lucide-react';
 
-export default function ProposalTable({ proposals, loading, onCancel, onDelete }) {
+export default function ProposalTable({ proposals, loading, onCancel, onDelete, onEdit }) {
   const [copiedCode, setCopiedCode] = useState(null);
   const [confirmCancelId, setConfirmCancelId] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
@@ -29,8 +29,12 @@ export default function ProposalTable({ proposals, loading, onCancel, onDelete }
     }
   };
 
+  const getProposalUrl = (proposal) => {
+    return `${window.location.origin}/pay/${proposal.product_slug}?proposal=${proposal.proposal_code}`;
+  };
+
   const handleCopyLink = (proposal) => {
-    const url = proposal.checkout_url || `${window.location.origin}/pay/${proposal.product_slug}?proposal=${proposal.proposal_code}`;
+    const url = getProposalUrl(proposal);
     navigator.clipboard.writeText(url);
     setCopiedCode(proposal.proposal_code);
     setTimeout(() => setCopiedCode(null), 2500);
@@ -38,7 +42,7 @@ export default function ProposalTable({ proposals, loading, onCancel, onDelete }
 
   const handleOpenWhatsApp = (proposal) => {
     const cleanPhone = (proposal.customer_phone || '').replace(/\D/g, '');
-    const url = proposal.checkout_url || `${window.location.origin}/pay/${proposal.product_slug}?proposal=${proposal.proposal_code}`;
+    const url = getProposalUrl(proposal);
     const text = encodeURIComponent(
       `Olá ${proposal.customer_name}! Conforme combinado, aqui está o link exclusivo para a sua vaga com a condição especial:\n\n🔗 ${url}\n\nQualquer dúvida estou à disposição!`
     );
@@ -144,7 +148,7 @@ export default function ProposalTable({ proposals, loading, onCancel, onDelete }
                   </button>
 
                   <a
-                    href={prop.checkout_url || `/pay/${prop.product_slug}?proposal=${prop.proposal_code}`}
+                    href={`/pay/${prop.product_slug}?proposal=${prop.proposal_code}`}
                     target="_blank"
                     rel="noreferrer"
                     className="btn-icon-action"
@@ -152,6 +156,18 @@ export default function ProposalTable({ proposals, loading, onCancel, onDelete }
                   >
                     <ExternalLink size={16} />
                   </a>
+
+                  {onEdit && prop.status !== 'paid' && (
+                    <button
+                      type="button"
+                      className="btn-icon-action"
+                      title="Editar Proposta"
+                      onClick={() => onEdit(prop)}
+                      data-testid={`btn-edit-proposal-${prop.id}`}
+                    >
+                      <Pencil size={16} />
+                    </button>
+                  )}
 
                   {prop.status === 'active' && !prop.is_expired && (
                     <button

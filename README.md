@@ -9,11 +9,20 @@ Plataforma completa e robusta de Checkout Próprio de Alta Conversão, com **Fas
 - 🛒 **Motor de Checkout de Alta Conversão**:
   - Checkout público responsivo mobile-first (`/pay/:slug`);
   - Suporte a Pix nativo com split e QR Code, Cartão de Crédito e Criptomoedas (USDT, USDC, BTC, ETH via MetaMask);
+  - **Boleto Parcelado & Pix Parcelado via Asaas**: Entrada via Pix para aprovação imediata do acesso + Carnê Digital mensal em até 24x no Asaas;
   - **Pagamento Híbrido**: Opção de entrada via Pix + restante no Cartão de Crédito (em até 12x), ou divisão em 2 Cartões de Crédito com limites independentes;
+  - **Fallback Inteligente de Cartão Recusado**: Modal instantâneo em recusas de cartão com oferta de Pix com desconto ou pagamento híbrido sem perda de dados;
+  - **Links Pré-Preenchidos & Auto-Cupom**: Suporte a parâmetros de URL (`?name=...&email=...&phone=...&cpf=...&coupon=...`) com aplicação instantânea;
+  - **Desconto Automático por Método**: Desconto configurável por produto para incentivo ao Pix e Criptomoedas com badges visuais de destaque;
+  - **Endereço de Cobrança com Autocompletar ViaCEP**: Exibição e validação para compras em Cartão e Boletos, com preservação de fluxo rápido no Pix/Cripto;
+  - **Testes A/B Nativos de Checkout**: Divisão 50/50 com persistência local e métricas de conversão e faturamento por variante;
+  - **Upsell & Downsell em 1 Clique**: Cobrança One-Click no cartão tokenizado e modal instantâneo de Pix pós-compra;
+  - **Mini-VSL e Player de Áudio Estilo WhatsApp**: Quebra de objeções e humanização no topo do checkout;
   - Seletor internacional de DDI com detecção de país e máscara telefônica dinâmica;
   - Campos flexíveis com CPF opcional ou obrigatório por produto (`require_cpf`);
-  - Elementos de conversão: Barra de cronômetro de escassez persistente e prova social/depoimentos;
+  - Elementos de conversão: Barra de cronômetro de escassez persistente, depoimentos/prova social e Exit-Intent Popup de última chance;
   - Order Bumps com seleção em 1 clique e multimoeda (BRL e USD/Cripto);
+  - Central do Comprador (`/minhas-compras`) com autenticação por código OTP para 2ª via de Pix e acesso a membros;
   - Funil de UpSell pós-compra (interno ou redirecionamento externo) e Página de Obrigado personalizada Clean White.
 - 💼 **Gerador de Links de Negociação Personalizada (High-Ticket / Closers)**:
   - Criação de propostas comerciais sob medida para clientes de WhatsApp, Zoom ou reuniões de fechamento;
@@ -95,10 +104,10 @@ Para subir todo o ecossistema (PostgreSQL, Backend FastAPI e Frontend Nginx):
 docker compose -f docker/docker-compose.yml up -d --build
 ```
 
-- **Frontend**: `http://localhost:3001`
+- **Frontend**: `http://localhost:3003`
 - **Backend API**: `http://localhost:8016`
 - **Documentação Swagger**: `http://localhost:8016/docs`
-- **PostgreSQL**: `localhost:5436`
+- **PostgreSQL**: `localhost:5438`
 
 ---
 

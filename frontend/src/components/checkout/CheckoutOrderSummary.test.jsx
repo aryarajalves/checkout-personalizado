@@ -79,4 +79,24 @@ describe('CheckoutOrderSummary - Resumo do Pedido no Checkout', () => {
     expect(screen.getByTestId('checkout-total-price')).toHaveTextContent('$68.94');
     expect(screen.getByText(/Equiv. aprox. R\$ 347,00/i)).toBeInTheDocument();
   });
+
+  it('exibe a linha de desconto por método quando paymentMethodDiscount está presente', () => {
+    render(
+      <CheckoutOrderSummary
+        product={mockProduct}
+        paymentMethod="pix"
+        totalOverrideBrl={267.30}
+        paymentMethodDiscount={{
+          method: 'pix',
+          percent: 10,
+          amount_brl: 29.70,
+        }}
+      />
+    );
+
+    expect(screen.getByTestId('summary-method-discount')).toBeInTheDocument();
+    expect(screen.getByTestId('summary-method-discount')).toHaveTextContent('🔥 Desconto Pix (10%)');
+    expect(screen.getByTestId('summary-method-discount')).toHaveTextContent('- R$ 29,70');
+    expect(screen.getByTestId('checkout-total-price')).toHaveTextContent('R$ 267,30');
+  });
 });

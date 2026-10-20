@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import users, backups, logs, gateways, split_recipients, products, checkout, webhooks, product_webhooks, coupons, recovery, affiliates, subscriptions, sales, proposals
+from app.api.v1.endpoints import users, backups, logs, gateways, split_recipients, products, checkout, webhooks, product_webhooks, coupons, recovery, affiliates, subscriptions, sales, proposals, uploads, security, ab_tests, buyer_portal
 
 api_router = APIRouter()
 api_router.include_router(users.router)
@@ -17,6 +17,11 @@ api_router.include_router(affiliates.router, prefix="/affiliates", tags=["affili
 api_router.include_router(subscriptions.router, prefix="/subscriptions", tags=["subscriptions"])
 api_router.include_router(sales.router, prefix="/sales", tags=["sales"])
 api_router.include_router(proposals.router, prefix="/proposals", tags=["proposals"])
+api_router.include_router(uploads.router, prefix="/uploads", tags=["uploads"])
+api_router.include_router(security.router, prefix="/security", tags=["security"])
+api_router.include_router(ab_tests.router, prefix="/ab-tests", tags=["ab-tests"])
+api_router.include_router(buyer_portal.router, prefix="/buyer-portal", tags=["buyer_portal"])
+
 
 
 

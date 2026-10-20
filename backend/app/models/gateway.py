@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, Float, ForeignKey
 from datetime import datetime, timezone
 from app.core.database import Base
 
@@ -24,6 +24,7 @@ class SplitRecipient(Base):
     __tablename__ = "split_recipients"
 
     id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     name = Column(String, nullable=False)
     email = Column(String, nullable=True)
     document = Column(String, nullable=True)
@@ -32,6 +33,7 @@ class SplitRecipient(Base):
     crypto_wallet = Column(String, nullable=True)
     crypto_network = Column(String, nullable=True, default="polygon")
     external_recipient_id = Column(String, nullable=True)
+    asaas_wallet_id = Column(String, nullable=True)
     default_percentage = Column(Float, default=0.0, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=utc_now)

@@ -23,12 +23,13 @@ export default function TerminalLogLine({ parsed, index }) {
       {/* Número da Linha */}
       <span
         style={{
-          color: '#475569',
+          color: '#94a3b8',
           userSelect: 'none',
-          minWidth: '32px',
+          minWidth: '34px',
           textAlign: 'right',
           fontSize: '11px',
           paddingTop: '2px',
+          fontFamily: 'monospace',
         }}
       >
         {index + 1}

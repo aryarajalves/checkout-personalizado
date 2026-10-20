@@ -12,7 +12,10 @@ from app.models.user import User
 from app.schemas.sales_report import (
     SalesMetricsResponse,
     OrderReportItemResponse,
-    UtmAnalyticsResponse
+    UtmAnalyticsResponse,
+    RefundOrderRequest,
+    BulkDeleteOrdersRequest,
+    BulkDeleteOrdersResponse
 )
 from app.services import sales_report_service
 
@@ -38,6 +41,7 @@ def get_sales_metrics(
 
 @router.get("/orders", response_model=List[OrderReportItemResponse])
 def list_orders_report(
+    response: Response,
     start_date: Optional[datetime] = Query(None, description="Data inicial"),
     end_date: Optional[datetime] = Query(None, description="Data final"),
     status: Optional[str] = Query(None, description="Filtro por status: paid, pending, failed, refunded, canceled"),
@@ -52,7 +56,7 @@ def list_orders_report(
     current_user: User = Depends(get_current_user)
 ):
     """Lista pedidos filtrados com paginação e busca."""
-    items, _ = sales_report_service.list_orders_report(
+    items, total = sales_report_service.list_orders_report(
         db=db,
         start_date=start_date,
         end_date=end_date,
@@ -65,6 +69,7 @@ def list_orders_report(
         limit=limit,
         offset=offset
     )
+    response.headers["X-Total-Count"] = str(total)
     return items
 
 
@@ -119,8 +124,61 @@ def get_order_details(
         "sck": order.sck,
         "created_at": order.created_at,
         "paid_at": order.paid_at,
+        "refund_reason": order.refund_reason,
+        "refunded_at": order.refunded_at,
         "splits": splits
     }
+
+
+@router.post("/orders/{order_id}/refund")
+def refund_order_endpoint(
+    order_id: int,
+    payload: RefundOrderRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Executa o estorno/reembolso de um pedido pago com registro do motivo."""
+    order = sales_report_service.refund_order(
+        db=db,
+        order_id=order_id,
+        reason=payload.reason,
+        notes=payload.notes
+    )
+    return {
+        "success": True,
+        "message": f"Pedido #{order.order_code} reembolsado com sucesso.",
+        "order_id": order.id,
+        "order_code": order.order_code,
+        "status": order.status,
+        "refund_reason": order.refund_reason,
+        "refunded_at": order.refunded_at
+    }
+
+
+@router.delete("/orders/{order_id}")
+def delete_order_endpoint(
+    order_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Exclui permanentemente um pedido específico do banco de dados."""
+    sales_report_service.delete_order(db=db, order_id=order_id)
+    return {"success": True, "message": f"Pedido #{order_id} excluído com sucesso."}
+
+
+@router.post("/orders/bulk-delete", response_model=BulkDeleteOrdersResponse)
+def bulk_delete_orders_endpoint(
+    payload: BulkDeleteOrdersRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Exclui múltiplos pedidos selecionados em lote permanentemente."""
+    count = sales_report_service.bulk_delete_orders(db=db, order_ids=payload.order_ids)
+    return BulkDeleteOrdersResponse(
+        success=True,
+        deleted_count=count,
+        message=f"{count} pedidos excluídos com sucesso."
+    )
 
 
 @router.get("/utm-bi", response_model=UtmAnalyticsResponse)

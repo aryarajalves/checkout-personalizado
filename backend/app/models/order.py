@@ -53,8 +53,32 @@ class Order(Base):
     hybrid_type = Column(String(30), nullable=True) # 'pix_card', 'two_cards'
     proposal_id = Column(Integer, ForeignKey("custom_proposals.id", ondelete="SET NULL"), nullable=True)
 
+    # 1-Click Buy & Funis Pós-Compra (Upsell / Downsell)
+    parent_order_id = Column(Integer, ForeignKey("orders.id", ondelete="SET NULL"), nullable=True, index=True)
+    order_type = Column(String(30), nullable=False, default="main") # 'main', 'upsell', 'downsell'
+    card_token = Column(String(255), nullable=True) # Token do cartão Pagar.me V5 para 1-clique
+
+    # Teste A/B de Ofertas (#18)
+    ab_test_id = Column(Integer, ForeignKey("ab_tests.id", ondelete="SET NULL"), nullable=True, index=True)
+    ab_test_variant = Column(String(10), nullable=True) # 'A' ou 'B'
+
+    # Endereço de Cobrança & Antifraude (ViaCEP) (#21)
+    billing_zip_code = Column(String(20), nullable=True)
+    billing_street = Column(String(255), nullable=True)
+    billing_number = Column(String(50), nullable=True)
+    billing_complement = Column(String(100), nullable=True)
+    billing_neighborhood = Column(String(100), nullable=True)
+    billing_city = Column(String(100), nullable=True)
+    billing_state = Column(String(10), nullable=True)
+
+    # Boleto Parcelado / Carnê Asaas (#6)
+    asaas_customer_id = Column(String(100), nullable=True)
+    asaas_installment_id = Column(String(100), nullable=True)
+
     expires_at = Column(DateTime, nullable=True)
     paid_at = Column(DateTime, nullable=True)
+    refund_reason = Column(String(255), nullable=True)
+    refunded_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=utc_now)
     updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
@@ -63,8 +87,10 @@ class Order(Base):
     coupon = relationship("app.models.coupon.Coupon")
     affiliate = relationship("app.models.affiliate.Affiliate")
     proposal = relationship("app.models.custom_proposal.CustomProposal", foreign_keys=[proposal_id])
+    parent_order = relationship("Order", remote_side=[id], foreign_keys=[parent_order_id])
     splits = relationship("OrderSplit", back_populates="order", cascade="all, delete-orphan")
     payments = relationship("OrderPayment", back_populates="order", cascade="all, delete-orphan", order_by="OrderPayment.part_number")
+    carnet_installments = relationship("OrderInstallment", back_populates="order", cascade="all, delete-orphan", order_by="OrderInstallment.installment_number")
 
 
 class OrderPayment(Base):
@@ -102,3 +128,26 @@ class OrderSplit(Base):
 
     order = relationship("Order", back_populates="splits")
     recipient = relationship("SplitRecipient")
+
+
+class OrderInstallment(Base):
+    __tablename__ = "order_installments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, index=True)
+    installment_number = Column(Integer, nullable=False)
+    total_installments = Column(Integer, nullable=False)
+    amount_brl = Column(Float, nullable=False)
+    due_date = Column(DateTime, nullable=False)
+    status = Column(String(30), nullable=False, default="pending", index=True) # 'pending', 'paid', 'overdue', 'canceled', 'refunded'
+    payment_method = Column(String(30), nullable=False, default="boleto") # 'pix', 'boleto', 'boleto_pix'
+    asaas_payment_id = Column(String(100), nullable=True, index=True)
+    bank_slip_url = Column(String(500), nullable=True)
+    bank_slip_bar_code = Column(String(150), nullable=True)
+    qr_code_base64 = Column(Text, nullable=True)
+    qr_code_text = Column(Text, nullable=True)
+    paid_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
+
+    order = relationship("Order", back_populates="carnet_installments")

@@ -55,6 +55,25 @@ class CheckoutProcessRequest(BaseModel):
     # Proposta Personalizada (High-Ticket / Closer)
     proposal_code: Optional[str] = None
 
+    # Teste A/B de Ofertas (#18)
+    ab_test_id: Optional[int] = None
+    ab_test_variant: Optional[str] = None
+
+    # Fallback Inteligente de Cartão Recusado (#5)
+    card_fallback_applied: Optional[bool] = False
+
+    # Boleto Parcelado / Carnê Asaas (#6)
+    asaas_installments: Optional[int] = Field(None, ge=1, le=24, description="Quantidade de parcelas no carnê Asaas")
+
+    # Endereço de Cobrança & Antifraude (ViaCEP) (#21)
+    billing_zip_code: Optional[str] = None
+    billing_street: Optional[str] = None
+    billing_number: Optional[str] = None
+    billing_complement: Optional[str] = None
+    billing_neighborhood: Optional[str] = None
+    billing_city: Optional[str] = None
+    billing_state: Optional[str] = None
+
 
 class OrderSplitResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -81,6 +100,23 @@ class OrderPaymentResponse(BaseModel):
     paid_at: Optional[datetime] = None
 
 
+class OrderInstallmentItemResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    installment_number: int
+    total_installments: int
+    amount_brl: float
+    due_date: datetime
+    status: str
+    payment_method: str
+    bank_slip_url: Optional[str] = None
+    bank_slip_bar_code: Optional[str] = None
+    qr_code_base64: Optional[str] = None
+    qr_code_text: Optional[str] = None
+    paid_at: Optional[datetime] = None
+
+
 class CheckoutProcessResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -94,6 +130,7 @@ class CheckoutProcessResponse(BaseModel):
     paid_amount_brl: Optional[float] = 0.0
     remaining_amount_brl: Optional[float] = 0.0
     payments: List[OrderPaymentResponse] = []
+    installments_list: List[OrderInstallmentItemResponse] = []
     coupon_code: Optional[str] = None
     discount_amount_brl: Optional[float] = 0.0
     discount_amount_usd: Optional[float] = 0.0
@@ -103,6 +140,8 @@ class CheckoutProcessResponse(BaseModel):
     affiliate_commission_brl: Optional[float] = 0.0
     qr_code_base64: Optional[str] = None
     qr_code_text: Optional[str] = None
+    bank_slip_url: Optional[str] = None
+    bank_slip_bar_code: Optional[str] = None
     crypto_wallet_address: Optional[str] = None
     crypto_network: Optional[str] = None
     crypto_currency: Optional[str] = None
@@ -133,8 +172,10 @@ class OrderStatusResponse(BaseModel):
     paid_amount_brl: Optional[float] = 0.0
     remaining_amount_brl: Optional[float] = 0.0
     payments: List[OrderPaymentResponse] = []
+    installments_list: List[OrderInstallmentItemResponse] = []
     thank_you_url: Optional[str] = None
     has_upsell: bool = False
+    enable_downsell: bool = False
     upsell_url: Optional[str] = None
     proposal_code: Optional[str] = None
     external_transaction_id: Optional[str] = None
@@ -152,4 +193,26 @@ class OrderStatusResponse(BaseModel):
 class Web3PaymentConfirmRequest(BaseModel):
     tx_hash: str = Field(..., min_length=6, description="Hash da transação assinada na MetaMask/Web3")
     sender_address: Optional[str] = Field(None, description="Endereço da carteira do comprador")
+
+
+class OneClickBuyRequest(BaseModel):
+    order_code: str = Field(..., description="Código do pedido principal de origem")
+    offer_type: str = Field("upsell", description="'upsell' ou 'downsell'")
+    payment_method: Optional[str] = Field(None, description="Método opcional de pagamento ('credit_card' ou 'pix')")
+
+
+class OneClickBuyResponse(BaseModel):
+    success: bool
+    status: str # 'paid' ou 'pending'
+    order_code: str
+    parent_order_code: str
+    offer_type: str
+    product_name: str
+    amount_brl: float
+    payment_method: str
+    message: str
+    qr_code_base64: Optional[str] = None
+    qr_code_text: Optional[str] = None
+    thank_you_url: Optional[str] = None
+
 

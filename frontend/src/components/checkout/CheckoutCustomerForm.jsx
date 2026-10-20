@@ -3,7 +3,7 @@ import { User, Mail, FileText } from 'lucide-react';
 import { maskCpf } from './checkoutUtils';
 import CheckoutPhoneInput from './CheckoutPhoneInput';
 
-export default function CheckoutCustomerForm({ formData, onChange, errors = {}, requireCpf = false }) {
+export default function CheckoutCustomerForm({ formData, onChange, errors = {}, requireCpf = false, isPreFilled = false }) {
   const handleCpfChange = (e) => {
     const masked = maskCpf(e.target.value);
     onChange({ target: { name: 'cpf', value: masked } });
@@ -22,6 +22,26 @@ export default function CheckoutCustomerForm({ formData, onChange, errors = {}, 
           <h3 className="checkout-step-title">Dados Pessoais</h3>
           <p className="checkout-step-desc">Informe seus dados para receber o acesso ao produto</p>
         </div>
+        {isPreFilled && (
+          <span
+            data-testid="prefilled-badge"
+            style={{
+              marginLeft: 'auto',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              backgroundColor: '#ecfdf5',
+              color: '#059669',
+              border: '1px solid #a7f3d0',
+              borderRadius: '999px',
+              padding: '3px 10px',
+              fontSize: '11px',
+              fontWeight: 700,
+            }}
+          >
+            ✓ Pré-preenchido
+          </span>
+        )}
       </div>
 
       <div className="checkout-form-grid">

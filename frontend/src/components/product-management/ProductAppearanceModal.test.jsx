@@ -143,9 +143,9 @@ describe('ProductAppearanceModal - Identidade Visual e Elementos de Conversão',
 
     fireEvent.click(screen.getByTestId('btn-confirm-add-testimonial'));
 
-    // Verifica que o card do depoimento foi adicionado
-    expect(screen.getByText('Carolina Mendes')).toBeInTheDocument();
-    expect(screen.getByText(/Transformou meu faturamento!/)).toBeInTheDocument();
+    // Verifica que o card do depoimento foi adicionado (no editor e no preview ao vivo)
+    expect(screen.getAllByText('Carolina Mendes').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Transformou meu faturamento!/).length).toBeGreaterThanOrEqual(1);
   });
 
   it('salva configurações completas de aparência, capa, timer e depoimentos', async () => {
@@ -206,6 +206,11 @@ describe('ProductAppearanceModal - Identidade Visual e Elementos de Conversão',
         timer_minutes: 15,
         timer_text: 'Esta oferta especial expira em:',
         testimonials: null,
+        header_media_type: 'none',
+        header_video_url: null,
+        header_audio_url: null,
+        header_audio_author_name: 'Mensagem do Especialista',
+        header_audio_author_avatar: null,
       });
       expect(handleFeedback).toHaveBeenCalledWith('success', 'Personalização e elementos de conversão salvos com sucesso!');
       expect(handleClose).toHaveBeenCalled();

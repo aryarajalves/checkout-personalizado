@@ -375,5 +375,94 @@ export async function updateProductAppearanceApi(productId, payload) {
   return res.json();
 }
 
+export async function fetchProductDomainApi(productId) {
+  const res = await fetch(`/api/v1/products/${productId}/domain`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.detail || 'Falha ao carregar domínio personalizado.');
+  }
+  return res.json();
+}
+
+export async function updateProductDomainApi(productId, customDomain) {
+  const res = await fetch(`/api/v1/products/${productId}/domain`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ custom_domain: customDomain }),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.detail || 'Falha ao salvar domínio personalizado.');
+  }
+  return res.json();
+}
+
+export async function verifyProductDomainApi(productId) {
+  const res = await fetch(`/api/v1/products/${productId}/domain/verify`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.detail || 'Falha ao verificar apontamento DNS.');
+  }
+  return res.json();
+}
+
+export async function fetchPublicProductByDomainApi(domain) {
+  const res = await fetch(`/api/v1/products/public/by-domain/${encodeURIComponent(domain)}`);
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.detail || 'Não foi possível carregar a oferta para este domínio.');
+  }
+  return res.json();
+}
+
+export async function fetchProductConversionConfigApi(productId) {
+  const res = await fetch(`/api/v1/products/${productId}/conversion`, {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.detail || 'Falha ao carregar configurações de conversão.');
+  }
+  return res.json();
+}
+
+export async function updateProductConversionConfigApi(productId, payload) {
+  const res = await fetch(`/api/v1/products/${productId}/conversion`, {
+    method: 'PUT',
+    headers: getAuthHeaders(),
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.detail || 'Falha ao atualizar configurações de conversão.');
+  }
+  return res.json();
+}
+
+export async function fetchCouponsForConversionApi() {
+  const res = await fetch('/api/v1/coupons', {
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.detail || 'Falha ao carregar cupons de desconto.');
+  }
+  return res.json();
+}
+
+export async function fetchPublicSocialProofApi(slug) {
+  const res = await fetch(`/api/v1/checkout/social-proof/${encodeURIComponent(slug)}`);
+  if (!res.ok) {
+    return [];
+  }
+  return res.json();
+}
+
+
 
 

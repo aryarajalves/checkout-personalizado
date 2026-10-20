@@ -12,9 +12,18 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     name = Column(String, nullable=False)
     hashed_password = Column(String, nullable=False)
-    role = Column(String, nullable=False, default="user") # 'superadmin', 'admin', 'user'
+    role = Column(String, nullable=False, default="user") # 'superadmin', 'admin', 'user', 'affiliate'
     is_active = Column(Boolean, default=True)
+    document = Column(String(30), nullable=True) # CPF ou CNPJ
+    document_type = Column(String(10), nullable=True, default="cpf") # 'cpf' ou 'cnpj'
+    phone = Column(String(50), nullable=True)
+    pix_key = Column(String(100), nullable=True)
+    pix_key_type = Column(String(20), nullable=True, default="cpf") # 'cpf', 'cnpj', 'email', 'phone', 'random'
+    crypto_wallet = Column(String(100), nullable=True)
+    crypto_network = Column(String(50), nullable=True, default="polygon")
+    external_recipient_id = Column(String(100), nullable=True) # ID do recebedor Pagar.me
     created_at = Column(DateTime, default=utc_now)
+    updated_at = Column(DateTime, default=utc_now, onupdate=utc_now)
 
 
 class Invite(Base):

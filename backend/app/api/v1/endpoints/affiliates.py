@@ -58,6 +58,71 @@ def get_affiliate_stats(
     return affiliate_service.get_affiliate_stats(db)
 
 
+@router.get("/me/profile", response_model=Optional[AffiliateResponse])
+def get_my_affiliate_profile(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Retorna o cadastro de afiliado do usuário logado se existir."""
+    aff = db.query(Affiliate).filter(
+        (Affiliate.user_id == current_user.id) | (Affiliate.email == current_user.email)
+    ).first()
+    if not aff:
+        return None
+    results = affiliate_service.get_affiliates_list(db, search=aff.affiliate_code)
+    for r in results:
+        if r.id == aff.id:
+            return r
+    return AffiliateResponse.model_validate(aff)
+
+
+@router.post("/me/join", response_model=AffiliateResponse)
+def join_as_affiliate(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Ativa o usuário logado como afiliado usando seus dados cadastrais e financeiros."""
+    from app.models.affiliate import generate_default_affiliate_code
+    aff = db.query(Affiliate).filter(
+        (Affiliate.user_id == current_user.id) | (Affiliate.email == current_user.email)
+    ).first()
+    if not aff:
+        aff = Affiliate(
+            user_id=current_user.id,
+            name=current_user.name,
+            email=current_user.email,
+            phone=current_user.phone or "11999999999",
+            document=current_user.document,
+            pix_key=current_user.pix_key,
+            pix_key_type=current_user.pix_key_type or "cpf",
+            crypto_wallet=current_user.crypto_wallet,
+            default_commission_percent=20.0,
+            affiliate_code=generate_default_affiliate_code(),
+            is_active=True
+        )
+        db.add(aff)
+        db.commit()
+        db.refresh(aff)
+    else:
+        if not aff.user_id:
+            aff.user_id = current_user.id
+        if current_user.pix_key:
+            aff.pix_key = current_user.pix_key
+            aff.pix_key_type = current_user.pix_key_type or "cpf"
+        if current_user.document:
+            aff.document = current_user.document
+        if current_user.phone:
+            aff.phone = current_user.phone
+        db.commit()
+        db.refresh(aff)
+
+    results = affiliate_service.get_affiliates_list(db, search=aff.affiliate_code)
+    for r in results:
+        if r.id == aff.id:
+            return r
+    return AffiliateResponse.model_validate(aff)
+
+
 @router.get("", response_model=List[AffiliateResponse])
 def list_affiliates(
     is_active: Optional[bool] = None,

@@ -11,6 +11,9 @@ export function ProductPixelModal({
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [pixelId, setPixelId] = useState('');
+  const [googleAdsId, setGoogleAdsId] = useState('');
+  const [googleAdsConversionLabel, setGoogleAdsConversionLabel] = useState('');
+  const [tiktokPixelId, setTiktokPixelId] = useState('');
   const [purchaseActive, setPurchaseActive] = useState(true);
   const [initiateActive, setInitiateActive] = useState(true);
   const [pageviewActive, setPageviewActive] = useState(true);
@@ -23,6 +26,9 @@ export function ProductPixelModal({
         setLoading(true);
         const data = await fetchProductPixelConfigApi(product.id);
         setPixelId(data.meta_pixel_id || '');
+        setGoogleAdsId(data.google_ads_id || '');
+        setGoogleAdsConversionLabel(data.google_ads_conversion_label || '');
+        setTiktokPixelId(data.tiktok_pixel_id || '');
         setPurchaseActive(data.pixel_purchase_active !== undefined ? data.pixel_purchase_active : true);
         setInitiateActive(data.pixel_initiate_active !== undefined ? data.pixel_initiate_active : true);
         setPageviewActive(data.pixel_pageview_active !== undefined ? data.pixel_pageview_active : true);
@@ -44,11 +50,14 @@ export function ProductPixelModal({
       setSaving(true);
       await updateProductPixelConfigApi(product.id, {
         meta_pixel_id: pixelId.trim() || null,
+        google_ads_id: googleAdsId.trim() || null,
+        google_ads_conversion_label: googleAdsConversionLabel.trim() || null,
+        tiktok_pixel_id: tiktokPixelId.trim() || null,
         pixel_purchase_active: purchaseActive,
         pixel_initiate_active: initiateActive,
         pixel_pageview_active: pageviewActive,
       });
-      showFeedback('success', 'Configurações de Pixel do Meta salvas com sucesso!');
+      showFeedback('success', 'Configurações de Pixels e Rastreamento salvas com sucesso!');
       onClose();
     } catch (err) {
       showFeedback('error', err.message || 'Erro ao salvar configurações do Pixel.');
@@ -78,7 +87,7 @@ export function ProductPixelModal({
               <Target size={22} />
             </div>
             <div>
-              <h3 className="webhooks-header-title">Pixel de Rastreamento (Meta / Facebook)</h3>
+              <h3 className="webhooks-header-title">Multi-Pixels de Rastreamento</h3>
               <p className="webhooks-header-subtitle">
                 Produto: <strong>{product.name}</strong> • (/pay/{product.slug})
               </p>
@@ -100,13 +109,14 @@ export function ProductPixelModal({
           {loading ? (
             <div style={{ padding: '40px 0', textAlign: 'center', color: '#64748b' }}>
               <div className="spinning-icon" style={{ display: 'inline-block', width: '28px', height: '28px', border: '3px solid #ede9fe', borderTopColor: '#7c3aed', borderRadius: '50%' }} />
-              <p style={{ marginTop: '12px', fontSize: '13px' }}>Carregando dados do pixel...</p>
+              <p style={{ marginTop: '12px', fontSize: '13px' }}>Carregando dados dos pixels...</p>
             </div>
           ) : (
             <>
-              <div style={{ marginBottom: '18px' }}>
+              {/* Meta Pixel */}
+              <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>
-                  ID do Pixel do Meta (Facebook Pixel ID)
+                  Meta / Facebook Pixel ID
                 </label>
                 <div style={{ position: 'relative' }}>
                   <input
@@ -121,7 +131,58 @@ export function ProductPixelModal({
                   <Activity size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
                 </div>
                 <span style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', display: 'block' }}>
-                  Insira o ID numérico obtido no Gerenciador de Eventos da Meta.
+                  ID numérico obtido no Gerenciador de Eventos da Meta.
+                </span>
+              </div>
+
+              {/* Google Ads */}
+              <div style={{ marginBottom: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>
+                    Google Ads ID
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control-modern"
+                    placeholder="Ex: AW-123456789"
+                    value={googleAdsId}
+                    onChange={(e) => setGoogleAdsId(e.target.value)}
+                    data-testid="input-google-ads-id"
+                    style={{ width: '100%', fontFamily: 'monospace', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>
+                    Rótulo de Conversão
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control-modern"
+                    placeholder="Ex: AbCdEfGhIjKlMnOpQrS"
+                    value={googleAdsConversionLabel}
+                    onChange={(e) => setGoogleAdsConversionLabel(e.target.value)}
+                    data-testid="input-google-ads-label"
+                    style={{ width: '100%', fontFamily: 'monospace', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              {/* TikTok Pixel */}
+              <div style={{ marginBottom: '18px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#1e293b', marginBottom: '6px' }}>
+                  TikTok Ads Pixel ID
+                </label>
+                <input
+                  type="text"
+                  className="form-control-modern"
+                  placeholder="Ex: C1234567890ABCDEF"
+                  value={tiktokPixelId}
+                  onChange={(e) => setTiktokPixelId(e.target.value)}
+                  data-testid="input-tiktok-pixel-id"
+                  style={{ width: '100%', fontFamily: 'monospace', fontSize: '13px' }}
+                />
+                <span style={{ fontSize: '12px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                  Código alfanumérico obtido no Gerenciador de Anúncios do TikTok.
                 </span>
               </div>
 

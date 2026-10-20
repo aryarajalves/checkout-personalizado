@@ -1,7 +1,7 @@
 """
 Endpoints para Gestão de Produtos, Múltiplas Ofertas e Regras de Split.
 """
-from typing import List
+from typing import List, Optional
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
@@ -27,6 +27,11 @@ from app.schemas.product import (
     ProductPixelConfigResponse,
     ProductAppearanceUpdate,
     ProductAppearanceResponse,
+    ProductConversionConfigUpdate,
+    ProductConversionConfigResponse,
+    ProductDomainUpdate,
+    ProductDomainResponse,
+    ProductInstallmentSimulationResponse,
 )
 from app.services import product_service
 
@@ -278,8 +283,82 @@ def update_product_appearance(
     return product_service.update_product_appearance(db, product_id, data)
 
 # ==============================================================================
+# Domínio Personalizado (CNAME Whitelabel)
+# ==============================================================================
+
+@router.get("/{product_id}/domain", response_model=ProductDomainResponse)
+def get_product_domain(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Obtém status do domínio personalizado e instruções de apontamento CNAME."""
+    return product_service.verify_product_domain(db, product_id)
+
+@router.put("/{product_id}/domain", response_model=ProductDomainResponse)
+def update_product_domain(
+    product_id: int,
+    data: ProductDomainUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Configura ou remove o domínio personalizado vinculado ao produto."""
+    return product_service.update_product_domain(db, product_id, data.custom_domain)
+
+@router.post("/{product_id}/domain/verify", response_model=ProductDomainResponse)
+def verify_product_domain(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Executa a verificação em tempo real do apontamento DNS CNAME do domínio."""
+    return product_service.verify_product_domain(db, product_id)
+
+# ==============================================================================
+# Rotas de Gatilhos de Conversão (Exit-Intent e Prova Social)
+# ==============================================================================
+
+@router.get("/{product_id}/conversion", response_model=ProductConversionConfigResponse)
+def get_product_conversion_endpoint(
+    product_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Retorna as configurações de Exit-Intent e Prova Social do produto."""
+    return product_service.get_product_conversion_config(db, product_id)
+
+@router.put("/{product_id}/conversion", response_model=ProductConversionConfigResponse)
+def update_product_conversion_endpoint(
+    product_id: int,
+    data: ProductConversionConfigUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Atualiza as configurações de Exit-Intent e Prova Social do produto."""
+    return product_service.update_product_conversion_config(db, product_id, data)
+
+@router.get("/{product_id}/installment-simulation", response_model=ProductInstallmentSimulationResponse)
+def get_product_installment_simulation_endpoint(
+    product_id: int,
+    offer_id: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Simulador em tempo real de parcelamento e lucratividade do split de sócios."""
+    from app.services.installment_service import simulate_product_splits
+    return simulate_product_splits(db, product_id=product_id, offer_id=offer_id)
+
+# ==============================================================================
 # Rota Pública do Checkout
 # ==============================================================================
+
+@router.get("/public/by-domain/{domain:path}", response_model=ProductResponse)
+def get_public_product_by_domain(
+    domain: str,
+    db: Session = Depends(get_db)
+):
+    """Rota pública para carregar o checkout a partir de um domínio personalizado (CNAME Whitelabel)."""
+    return product_service.get_product_by_custom_domain(db, domain)
 
 @router.get("/public/{slug}", response_model=ProductResponse)
 def get_public_product_by_slug(
@@ -288,3 +367,4 @@ def get_public_product_by_slug(
 ):
     """Rota pública acessada pela tela de checkout para carregar os dados da oferta e do produto."""
     return product_service.get_product_by_slug(db, slug)
+

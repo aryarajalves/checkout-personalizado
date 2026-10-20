@@ -2,6 +2,7 @@
 Serviço de captura de leads e recuperação de vendas (Abandono de Checkout e Pix Gerado/Pendente).
 """
 import re
+import urllib.parse
 from datetime import datetime, timezone, timedelta
 from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
@@ -25,6 +26,31 @@ from app.services.webhook_dispatcher_service import (
     format_customer_phone_fields,
     STATUS_PORTUGUESE,
 )
+
+def build_recovery_url(slug: str, cart: AbandonedCart) -> Optional[str]:
+    """
+    Gera link direto de recuperação pré-preenchido com query params (recover, name, email, phone, cpf, coupon).
+    """
+    if not slug:
+        return None
+    params = {}
+    if cart.recovery_token:
+        params["recover"] = cart.recovery_token
+    if cart.customer_name:
+        params["name"] = cart.customer_name
+    if cart.customer_email:
+        params["email"] = cart.customer_email
+    if cart.customer_phone:
+        params["phone"] = cart.customer_phone
+    if cart.customer_phone_ddi and cart.customer_phone_ddi != "55":
+        params["phone_ddi"] = cart.customer_phone_ddi
+    if cart.customer_cpf:
+        params["cpf"] = cart.customer_cpf
+    if cart.coupon_code:
+        params["coupon"] = cart.coupon_code
+
+    query_str = urllib.parse.urlencode(params)
+    return f"/pay/{slug}?{query_str}" if query_str else f"/pay/{slug}"
 
 def capture_lead(db: Session, request: CheckoutLeadCaptureRequest) -> CheckoutLeadCaptureResponse:
     """
@@ -87,6 +113,10 @@ def capture_lead(db: Session, request: CheckoutLeadCaptureRequest) -> CheckoutLe
             existing_cart.utm_term = request.utm_term.strip()
         if getattr(request, "src", None):
             existing_cart.src = request.src.strip()
+        if getattr(request, "ab_test_id", None):
+            existing_cart.ab_test_id = request.ab_test_id
+        if getattr(request, "ab_test_variant", None):
+            existing_cart.ab_test_variant = request.ab_test_variant
         existing_cart.updated_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(existing_cart)
@@ -116,6 +146,8 @@ def capture_lead(db: Session, request: CheckoutLeadCaptureRequest) -> CheckoutLe
         utm_content=request.utm_content.strip() if getattr(request, "utm_content", None) else None,
         utm_term=request.utm_term.strip() if getattr(request, "utm_term", None) else None,
         src=request.src.strip() if getattr(request, "src", None) else None,
+        ab_test_id=getattr(request, "ab_test_id", None),
+        ab_test_variant=getattr(request, "ab_test_variant", None),
         status="abandoned",
         contacted=False,
     )
@@ -166,9 +198,10 @@ def list_abandoned_carts(
     product_id: Optional[int] = None,
     status_filter: Optional[str] = None,
     search: Optional[str] = None,
-    limit: int = 50,
+    limit: int = 20,
     offset: int = 0,
-) -> List[AbandonedCartResponse]:
+    return_total: bool = False,
+):
     """Lista carrinhos abandonados com enriquecimento de dados e links de recuperação."""
     query = db.query(AbandonedCart).join(Product, AbandonedCart.product_id == Product.id)
 
@@ -186,13 +219,14 @@ def list_abandoned_carts(
             )
         )
 
+    total_count = query.count() if return_total else 0
     carts = query.order_by(desc(AbandonedCart.created_at)).offset(offset).limit(limit).all()
 
     result: List[AbandonedCartResponse] = []
     for c in carts:
         phone_info = format_customer_phone_fields(c.customer_phone, c.customer_phone_ddi)
         slug_ref = c.offer.slug if c.offer else (c.product.slug if c.product else "")
-        rec_url = f"/pay/{slug_ref}?recover={c.recovery_token}" if slug_ref else None
+        rec_url = build_recovery_url(slug_ref, c)
 
         result.append(
             AbandonedCartResponse(
@@ -219,7 +253,32 @@ def list_abandoned_carts(
                 updated_at=c.updated_at,
             )
         )
+
+    if return_total:
+        return result, total_count
     return result
+
+
+def delete_abandoned_cart(db: Session, cart_id: int) -> bool:
+    """Exclui permanentemente um carrinho abandonado."""
+    cart = db.query(AbandonedCart).filter(AbandonedCart.id == cart_id).first()
+    if not cart:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Carrinho abandonado não encontrado.")
+    db.delete(cart)
+    db.commit()
+    logger.info(f"Carrinho abandonado #{cart_id} excluído com sucesso.")
+    return True
+
+
+def bulk_delete_abandoned_carts(db: Session, cart_ids: List[int]) -> int:
+    """Exclui permanentemente uma lista de carrinhos abandonados em lote."""
+    if not cart_ids:
+        return 0
+    deleted_count = db.query(AbandonedCart).filter(AbandonedCart.id.in_(cart_ids)).delete(synchronize_session=False)
+    db.commit()
+    logger.info(f"{deleted_count} carrinhos abandonados excluídos em lote.")
+    return deleted_count
+
 
 
 def update_abandoned_cart(
@@ -249,7 +308,7 @@ def update_abandoned_cart(
 
     phone_info = format_customer_phone_fields(cart.customer_phone, cart.customer_phone_ddi)
     slug_ref = cart.offer.slug if cart.offer else (cart.product.slug if cart.product else "")
-    rec_url = f"/pay/{slug_ref}?recover={cart.recovery_token}" if slug_ref else None
+    rec_url = build_recovery_url(slug_ref, cart)
 
     return AbandonedCartResponse(
         id=cart.id,

@@ -9,9 +9,11 @@ vi.mock('./productApi', () => ({
   createProductUpsellApi: vi.fn(),
   updateProductUpsellApi: vi.fn(),
   deleteProductUpsellApi: vi.fn(),
+  fetchProductsApi: vi.fn(),
+  fetchProductOffersApi: vi.fn(),
 }));
 
-describe('ProductUpsellModal - Configuração de UpSell do Produto', () => {
+describe('ProductUpsellModal - Configuração de UpSell e Downsell do Produto', () => {
   const mockProduct = {
     id: 15,
     name: 'Mentoria Exclusiva',
@@ -20,6 +22,13 @@ describe('ProductUpsellModal - Configuração de UpSell do Produto', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    productApi.fetchProductsApi.mockResolvedValue([
+      { id: 20, name: 'Livro Físico', price_brl: 49.9 },
+      { id: 30, name: 'Mini Curso', price_brl: 29.0 },
+    ]);
+    productApi.fetchProductOffersApi.mockResolvedValue([
+      { id: 201, name: 'Oferta Promocional', price_brl: 39.9 },
+    ]);
   });
 
   it('não renderiza nada quando isOpen é false', () => {
@@ -34,7 +43,7 @@ describe('ProductUpsellModal - Configuração de UpSell do Produto', () => {
     expect(container.firstChild).toBeNull();
   });
 
-  it('carrega dados existentes do UpSell incluindo external_url', async () => {
+  it('carrega dados existentes do UpSell e Downsell', async () => {
     productApi.fetchProductUpsellsApi.mockResolvedValueOnce([
       {
         id: 101,
@@ -45,6 +54,10 @@ describe('ProductUpsellModal - Configuração de UpSell do Produto', () => {
         video_url: 'https://youtube.com/watch?v=123',
         external_url: 'https://minhapagina.com/upsell-masterclass',
         is_active: true,
+        upsell_product_id: 20,
+        enable_downsell: true,
+        downsell_title: 'Versão Resumida',
+        downsell_price_brl: 27.0,
       },
     ]);
 
@@ -62,14 +75,22 @@ describe('ProductUpsellModal - Configuração de UpSell do Produto', () => {
       expect(screen.getByTestId('input-upsell-external-url')).toHaveValue('https://minhapagina.com/upsell-masterclass');
       expect(screen.getByTestId('input-upsell-price')).toHaveValue(147);
     });
+
+    // Clica na aba de Downsell
+    fireEvent.click(screen.getByTestId('tab-downsell'));
+
+    await waitFor(() => {
+      expect(screen.getByTestId('toggle-enable-downsell')).toBeChecked();
+      expect(screen.getByTestId('input-downsell-title')).toHaveValue('Versão Resumida');
+      expect(screen.getByTestId('input-downsell-price')).toHaveValue(27);
+    });
   });
 
-  it('permite cadastrar e salvar external_url na criação de UpSell', async () => {
+  it('permite cadastrar UpSell e configurar Downsell com catálogo', async () => {
     productApi.fetchProductUpsellsApi.mockResolvedValueOnce([]);
     productApi.createProductUpsellApi.mockResolvedValueOnce({
       id: 202,
       title: 'Oferta Especial',
-      external_url: 'https://oferta.seusite.com/pagina-upsell',
     });
 
     const handleClose = vi.fn();
@@ -85,20 +106,39 @@ describe('ProductUpsellModal - Configuração de UpSell do Produto', () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId('input-upsell-external-url')).toBeInTheDocument();
+      expect(screen.getByTestId('select-upsell-catalog-product')).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByTestId('input-upsell-external-url'), {
-      target: { value: 'https://oferta.seusite.com/pagina-upsell' },
+    // Seleciona produto do catálogo para UpSell
+    fireEvent.change(screen.getByTestId('select-upsell-catalog-product'), {
+      target: { value: '20' },
     });
 
+    // Vai para aba de Downsell
+    fireEvent.click(screen.getByTestId('tab-downsell'));
+
+    // Ativa Downsell
+    const toggleDownsell = screen.getByTestId('toggle-enable-downsell');
+    fireEvent.click(toggleDownsell);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('input-downsell-price')).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByTestId('input-downsell-price'), {
+      target: { value: '37.00' },
+    });
+
+    // Salva
     fireEvent.click(screen.getByTestId('btn-save-upsell'));
 
     await waitFor(() => {
       expect(productApi.createProductUpsellApi).toHaveBeenCalledWith(
         15,
         expect.objectContaining({
-          external_url: 'https://oferta.seusite.com/pagina-upsell',
+          upsell_product_id: 20,
+          enable_downsell: true,
+          downsell_price_brl: 37.0,
         })
       );
       expect(handleFeedback).toHaveBeenCalledWith('success', expect.stringContaining('criada'));
@@ -129,17 +169,13 @@ describe('ProductUpsellModal - Configuração de UpSell do Produto', () => {
       expect(screen.getByTestId('btn-delete-upsell')).toBeInTheDocument();
     });
 
-    // Clica para excluir
     fireEvent.click(screen.getByTestId('btn-delete-upsell'));
 
-    // Popup centralizado de confirmação deve aparecer
     expect(screen.getByTestId('upsell-delete-confirm-overlay')).toBeInTheDocument();
-    expect(screen.getByText('Excluir Oferta de UpSell?')).toBeInTheDocument();
+    expect(screen.getByText('Excluir Oferta de UpSell/Downsell?')).toBeInTheDocument();
 
-    // Clica em cancelar dentro do popup
     fireEvent.click(screen.getByTestId('btn-cancel-delete-upsell'));
 
-    // Popup deve fechar sem chamar deleteApi
     expect(screen.queryByTestId('upsell-delete-confirm-overlay')).not.toBeInTheDocument();
     expect(productApi.deleteProductUpsellApi).not.toHaveBeenCalled();
   });
@@ -171,7 +207,6 @@ describe('ProductUpsellModal - Configuração de UpSell do Produto', () => {
     });
 
     fireEvent.click(screen.getByTestId('btn-delete-upsell'));
-
     expect(screen.getByTestId('btn-confirm-delete-upsell')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('btn-confirm-delete-upsell'));
 

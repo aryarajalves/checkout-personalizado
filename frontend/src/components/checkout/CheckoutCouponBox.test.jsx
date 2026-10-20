@@ -4,7 +4,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import CheckoutCouponBox from './CheckoutCouponBox';
 import * as checkoutApi from './checkoutApi';
 
-vi.mock('./checkoutApi');
+vi.mock('./checkoutApi', async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    validateCouponApi: vi.fn(),
+  };
+});
 
 describe('CheckoutCouponBox Component', () => {
   beforeEach(() => {
@@ -27,7 +33,7 @@ describe('CheckoutCouponBox Component', () => {
 
   it('validates and applies coupon successfully on button click', async () => {
     const handleApplyMock = vi.fn();
-    vi.spyOn(checkoutApi, 'validateCouponApi').mockResolvedValueOnce({
+    vi.mocked(checkoutApi.validateCouponApi).mockResolvedValueOnce({
       valid: true,
       code: 'PROMO15',
       discount_percent: 15.0,
@@ -65,7 +71,7 @@ describe('CheckoutCouponBox Component', () => {
   });
 
   it('displays error message when API rejects coupon', async () => {
-    vi.spyOn(checkoutApi, 'validateCouponApi').mockRejectedValueOnce(
+    vi.mocked(checkoutApi.validateCouponApi).mockRejectedValueOnce(
       new Error('Este cupom de desconto já expirou.')
     );
 

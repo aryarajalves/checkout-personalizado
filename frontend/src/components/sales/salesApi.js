@@ -59,7 +59,12 @@ export async function fetchOrdersReportApi({
     const error = await res.json().catch(() => ({}));
     throw new Error(error.detail || 'Falha ao carregar relatório de pedidos.');
   }
-  return res.json();
+  const totalCount = parseInt(res.headers.get('X-Total-Count'), 10);
+  const items = await res.json();
+  return {
+    items,
+    total: !isNaN(totalCount) ? totalCount : items.length,
+  };
 }
 
 export async function fetchOrderDetailsApi(orderId) {
@@ -116,3 +121,42 @@ export async function downloadOrdersCsvApi(filters = {}) {
   a.remove();
   window.URL.revokeObjectURL(url);
 }
+
+export async function refundOrderApi(orderId, { reason, notes = '' } = {}) {
+  const res = await fetch(`/api/v1/sales/orders/${orderId}/refund`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ reason, notes }),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.detail || 'Falha ao estornar o pedido.');
+  }
+  return res.json();
+}
+
+export async function deleteOrderApi(orderId) {
+  const res = await fetch(`/api/v1/sales/orders/${orderId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.detail || 'Falha ao excluir pedido.');
+  }
+  return res.json();
+}
+
+export async function bulkDeleteOrdersApi(orderIds) {
+  const res = await fetch('/api/v1/sales/orders/bulk-delete', {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ order_ids: orderIds }),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.detail || 'Falha ao excluir pedidos em lote.');
+  }
+  return res.json();
+}
+

@@ -21,7 +21,7 @@ export async function fetchRecoveryStatsApi() {
   return res.json();
 }
 
-export async function fetchAbandonedCartsApi({ productId, status, search, limit = 50, offset = 0 } = {}) {
+export async function fetchAbandonedCartsApi({ productId, status, search, limit = 20, offset = 0 } = {}) {
   const params = new URLSearchParams();
   if (productId) params.append('product_id', productId);
   if (status && status !== 'all') params.append('status', status);
@@ -35,6 +35,37 @@ export async function fetchAbandonedCartsApi({ productId, status, search, limit 
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
     throw new Error(error.detail || 'Falha ao carregar carrinhos abandonados.');
+  }
+
+  const totalHeader = res.headers && typeof res.headers.get === 'function'
+    ? res.headers.get('X-Total-Count')
+    : null;
+  const items = await res.json();
+  const total = totalHeader !== null ? parseInt(totalHeader, 10) : (Array.isArray(items) ? items.length : 0);
+  return { items, total };
+}
+
+export async function deleteAbandonedCartApi(cartId) {
+  const res = await fetch(`/api/v1/recovery/abandoned-carts/${cartId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.detail || 'Falha ao excluir carrinho abandonado.');
+  }
+  return res.json();
+}
+
+export async function bulkDeleteAbandonedCartsApi(cartIds) {
+  const res = await fetch('/api/v1/recovery/abandoned-carts/bulk-delete', {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ cart_ids: cartIds }),
+  });
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({}));
+    throw new Error(error.detail || 'Falha ao excluir carrinhos em massa.');
   }
   return res.json();
 }
